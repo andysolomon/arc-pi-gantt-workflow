@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arc.dev/schema/checkpoint.schema.json",
+  "title": "Workflow checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["state", "updated_at"],
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "ready",
+        "completed",
+        "blocked",
+        "cancelled",
+        "needs-replan"
+      ]
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidence_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  }
+}

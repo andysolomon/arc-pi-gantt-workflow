@@ -1,0 +1,22 @@
+{
+  "envelope_version": "1.0.0",
+  "event_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "workflow_slug": "m1-vertical-slice",
+  "item_id": "5.1",
+  "session_id": "sess-m1-5-1",
+  "emitted_at": "2026-09-03T00:00:00.000Z",
+  "kind": "question",
+  "payload": {
+    "question_id": "q-integrate-5.1",
+    "text": "Cherry-pick the verified leaf into the main worktree?",
+    "options": [
+      { "label": "Integrate" },
+      { "label": "Hold" }
+    ],
+    "gate": "integration"
+  },
+  "provenance": {
+    "source": "child-session",
+    "broker": "arc_ask_operator"
+  }
+}

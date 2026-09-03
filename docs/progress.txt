@@ -1,0 +1,62 @@
+arc-pi-gantt-workflow - ARC Pi Gantt Workflow - Progress
+Generated: 2026-09-02 22:03:03 EDT
+Plan: docs/IMPLEMENTATION_PLAN.md
+Source artifact: docs/gantt-workflow/plan.md
+Status: Phase 0 scaffold complete (0.1 workspace, 0.2 schemas, 0.3 seams). Product runtime is not started. M1 (Phase 5) still gates Phases 6-9.
+Task slug: gantt-workflow
+Settled decisions: ARC Decision Ledger semanticKey prefix arc-workflow.*
+This tracker is not Implement or Deploy authorization. Each leaf needs its own exact Implement contract.
+On completion, move this file and the plan to docs/archive/.
+
+[x] 0.0 - Phase 0 - Scaffold and seams
+    [x] 0.1 - Workspace scaffold (package.json, packages/*, tsconfig, lint/test)
+    [x] 0.2 - Schema drafts (workflow, checkpoint, event-envelope; multi_repo reserved, single-writable-repo in v1)
+    [x] 0.3 - Seam confirmation (docs/gantt-workflow/seams.md; no TBD rows)
+
+[ ] 1.0 - Phase 1 - Core model, normalization, validation
+    [ ] 1.1 - DAG model + six checkpoint states
+    [ ] 1.2 - Normalizer for phased plans and flat stories
+    [ ] 1.3 - Validator + activation gate + structural bounds
+    [ ] 1.4 - Deterministic importer (model-proposal hook is interface only)
+    [ ] 1.5 - progress.txt / Gantt renderers + drift warning
+
+[ ] 2.0 - Phase 2 - Journal, events, scheduling
+    [ ] 2.1 - Private runtime journal (append-only, redacted, gitignored)
+    [ ] 2.2 - Versioned bounded event envelopes
+    [ ] 2.3 - Scheduler (concurrency 4; continue independent branches; hybrid question queue)
+
+[ ] 3.0 - Phase 3 - Sessions, questions, orchestrator bridge
+    [ ] 3.1 - Four child profiles; exclude workflow extension and nested subagents
+    [ ] 3.2 - Persisted in-process AgentSession per leaf; reopen after restart
+    [ ] 3.3 - Question broker via arc_ask_operator only; fail-closed mandatory gates
+    [ ] 3.4 - Orchestrator bridge (runner unchanged; wrap live-activity events)
+
+[ ] 4.0 - Phase 4 - Isolation and integration
+    [ ] 4.1 - Worktree manager (default: worktree per writing item)
+    [ ] 4.2 - Verify, local commit, ask, cherry-pick
+    [ ] 4.3 - Automatic conflict resolution then full workflow checks
+    [ ] 4.4 - Completion + atomic progress update + optional risk-based review
+
+[ ] 5.0 - Phase 5 - M1 sequential vertical slice (first milestone; gates Phases 6-9)
+    [ ] 5.1 - M1 fixture workflow (examples/m1-vertical-slice)
+    [ ] 5.2 - Sequential runner (concurrency forced to 1)
+    [ ] 5.3 - Live ARC integration test (temp repo/worktree only; no push)
+
+[ ] 6.0 - Phase 6 - Parallel Gantt execution
+    [ ] 6.1 - Parallel scheduler (concurrency 4, per-item supervision)
+    [ ] 6.2 - Question queue under parallelism
+    [ ] 6.3 - Dashboard + passive widget (TUI and RPC)
+
+[ ] 7.0 - Phase 7 - Recovery, restart, cancel
+    [ ] 7.1 - Diagnose and propose, then new Implement approval
+    [ ] 7.2 - Restart: reconcile then ask
+    [ ] 7.3 - Cancel: stop first, then ask what to preserve
+
+[ ] 8.0 - Phase 8 - Live edits and import proposals
+    [ ] 8.1 - Impact-based revalidation on live YAML edits
+    [ ] 8.2 - Model-proposal importer with confirmed dependencies / parallel-safety
+
+[ ] 9.0 - Phase 9 - Release-ready handoff
+    [ ] 9.1 - Archival (ask keep/delete sessions)
+    [ ] 9.2 - Package publish readiness (no remote push/deploy)
+    [ ] 9.3 - Operator and user docs (install, /arc-workflow, Pi vs ARC routes)

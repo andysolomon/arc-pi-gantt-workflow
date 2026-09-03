@@ -1,0 +1,15 @@
+{
+  "envelope_version": "1.0.0",
+  "event_id": "01ARZ3NDEKTSV4RRFFQ69G5FB0",
+  "workflow_slug": "m1-vertical-slice",
+  "item_id": "5.1",
+  "session_id": "sess-m1-5-1",
+  "emitted_at": "2026-09-03T00:00:01.000Z",
+  "kind": "progress",
+  "payload": {
+    "summary": "Child session started"
+  },
+  "provenance": {
+    "source": "controller"
+  }
+}

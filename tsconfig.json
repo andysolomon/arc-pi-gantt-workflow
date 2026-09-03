@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/workflow-core" },
+    { "path": "packages/arc-pi-adapter" }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arc.dev/schema/workflow.schema.json",
+  "title": "Authoritative workflow document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "slug", "repository", "items"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "path": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "multi_repo": {
+      "description": "Reserved for later multi-repo writes. v1 must omit this field or set it to an empty array.",
+      "type": "array",
+      "maxItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "path": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/item" }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "parent_id",
+        "nesting_depth",
+        "dependencies",
+        "checkpoint"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "kind": { "type": "string", "enum": ["group", "leaf"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "parent_id": {
+          "type": ["string", "null"],
+          "maxLength": 64
+        },
+        "nesting_depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "outcome": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "scope": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "acceptance_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "type": "string", "minLength": 1, "maxLength": 240 }
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        },
+        "preserved_behavior": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "checkpoint": { "$ref": "https://arc.dev/schema/checkpoint.schema.json" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "leaf" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": [
+              "outcome",
+              "scope",
+              "acceptance_criteria",
+              "dependencies",
+              "preserved_behavior"
+            ],
+            "properties": {
+              "outcome": { "type": "string" },
+              "scope": { "type": "string" },
+              "acceptance_criteria": { "type": "array" },
+              "dependencies": { "type": "array" },
+              "preserved_behavior": { "type": "string" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

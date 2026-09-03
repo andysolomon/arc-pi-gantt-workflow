@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arc.dev/schema/event-envelope.schema.json",
+  "title": "Child-to-controller event envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "envelope_version",
+    "event_id",
+    "workflow_slug",
+    "item_id",
+    "session_id",
+    "emitted_at",
+    "kind",
+    "payload",
+    "provenance"
+  ],
+  "properties": {
+    "envelope_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "workflow_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+    },
+    "item_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "emitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["question", "progress", "artifact", "verify", "error", "done"]
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "question_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label"],
+            "properties": {
+              "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "description": { "type": "string", "maxLength": 240 }
+            }
+          }
+        },
+        "gate": {
+          "type": "string",
+          "enum": ["none", "implement", "integration", "release", "deploy"]
+        },
+        "default_on_timeout": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 32768 }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "source": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "broker": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "copied_to": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "const": "question" } },
+        "required": ["kind"]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["question_id", "text", "options", "gate"],
+            "properties": {
+              "question_id": { "type": "string" },
+              "text": { "type": "string" },
+              "options": { "type": "array" },
+              "gate": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": { "gate": { "not": { "const": "none" } } },
+            "required": ["gate"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "not": {
+              "required": ["default_on_timeout"],
+              "properties": {
+                "default_on_timeout": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "arc-pi-gantt-workflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Generic workflow library plus a thin ARC Pi adapter.",
+  "workspaces": [
+    "packages/workflow-core",
+    "packages/arc-pi-adapter"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/node": "^24.13.3",
+    "eslint": "^10.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0"
+  }
+}
