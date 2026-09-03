@@ -1,13 +1,11 @@
-export const PACKAGE_NAME = "@arc/pi-workflow";
-
 export {
   CHILD_PROFILES,
   CHILD_PROFILE_IDS,
   WORKFLOW_EXTENSION_ID,
   getChildProfile,
-} from "./sessions/index.ts";
+} from "./profiles.ts";
 export type {
   ChildProfile,
   ChildProfileId,
   ParentModelSelection,
-} from "./sessions/index.ts";
+} from "./profiles.ts";
