@@ -3,6 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "rootDir": ".",
     "tsBuildInfoFile": "../../node_modules/.tmp/workflow-core.tsbuildinfo"
   },
