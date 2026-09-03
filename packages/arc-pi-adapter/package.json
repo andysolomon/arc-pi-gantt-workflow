@@ -1,0 +1,21 @@
+{
+  "name": "@arc/pi-workflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Thin ARC Pi adapter for the generic workflow library.",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "node --test --test-isolation=none --test-reporter spec test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

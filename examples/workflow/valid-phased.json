@@ -1,0 +1,40 @@
+{
+  "schema_version": "1",
+  "slug": "m1-vertical-slice",
+  "repository": {
+    "id": "local",
+    "path": "."
+  },
+  "items": [
+    {
+      "id": "5.0",
+      "kind": "group",
+      "title": "M1 sequential vertical slice",
+      "parent_id": null,
+      "nesting_depth": 0,
+      "dependencies": [],
+      "checkpoint": {
+        "state": "planned",
+        "updated_at": "2026-09-03T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "5.1",
+      "kind": "leaf",
+      "title": "M1 fixture workflow",
+      "parent_id": "5.0",
+      "nesting_depth": 1,
+      "outcome": "Create a single-leaf fixture that can complete sequentially.",
+      "scope": "examples/m1-vertical-slice and a disposable temp repo.",
+      "acceptance_criteria": [
+        "Fixture YAML validates against the workflow schema"
+      ],
+      "dependencies": [],
+      "preserved_behavior": "No remote push, GitHub mutation, or deploy.",
+      "checkpoint": {
+        "state": "planned",
+        "updated_at": "2026-09-03T00:00:00.000Z"
+      }
+    }
+  ]
+}
