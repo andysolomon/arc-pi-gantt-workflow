@@ -1,6 +1,6 @@
 # ARC Pi Gantt Workflow — Implementation Plan
 
-**Status:** Phase 0 scaffold complete (0.1 workspace, 0.2 schemas, 0.3 seams). Product runtime is not started.
+**Status:** Phase 1 complete (model, normalizer, validator, importer, renderers + drift check). Phase 2 runtime work has not started.
 **Source artifact:** `docs/gantt-workflow/plan.md` (Plan worker, 2026-09-03). This file is the human-facing promotion of that artifact, with truncated/redacted lines restored from the Decision Ledger and parent-confirmed sibling seams.
 **Task slug:** `gantt-workflow`
 **Planning mode:** Hybrid greenfield + integration gap

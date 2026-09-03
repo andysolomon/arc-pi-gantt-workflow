@@ -7,8 +7,9 @@ adapter. Version one turns phased plans and flat story lists into a
 validated DAG, runs each executable leaf in its own persisted Pi session,
 and uses `arc_ask_operator` for material decisions.
 
-**Status:** Phase 0 scaffold is complete (workspace, schemas, seams);
-product runtime is not started. See `docs/IMPLEMENTATION_PLAN.md` and
+**Status:** Phase 1 is complete (model, normalizer, validator, importer,
+renderers + drift check); Phase 2 runtime work has not started. See
+`docs/IMPLEMENTATION_PLAN.md` and
 `docs/progress.txt`.
 
 ## Version-one shape

@@ -68,3 +68,49 @@
 - Next actions:
   - Wave 02 (1.2, 1.5, 2.1) is unblocked by 1.1; 3.2 is unblocked by 3.1.
   - Add packages/*/src/*.js to .gitignore to absorb future noEmit accidents.
+
+## Evidence
+
+- Status: completed
+- Summary: Implemented the Phase 1.3 pure workflow validator with deterministic structural diagnostics, configurable conservative bounds, cycle/reference checks, and separate non-mutating activation readiness per leaf.
+- Changes:
+  - packages/workflow-core/src/validate/validate.ts: added validateWorkflow, structural checks, cycle detection, bounds, deterministic diagnostics, and readiness evaluation.
+  - packages/workflow-core/src/validate/types.ts: added public validator, diagnostic, bounds, and readiness contracts.
+  - packages/workflow-core/src/validate/index.ts: exported validator API and types.
+  - packages/workflow-core/test/validate.test.ts: added 8 focused tests covering all requested validation and activation cases.
+  - packages/workflow-core/src/index.ts: re-exported normalize and validate APIs; normalize export preserves the verified Phase 1.2 package interface.
+- Verification:
+  - Focused validator tests: 8 passed, 0 failed.
+  - All repository tests: workflow-core 49 passed; arc-pi-adapter 13 passed.
+  - npm run typecheck passed.
+  - npm run lint passed.
+  - git diff --check passed from repository root.
+  - Final status and scoped diff inspected; validator contains no Pi, filesystem, YAML, AJV, or orchestrator imports.
+- Risks:
+  - The worktree contains pre-existing unrelated modified/untracked files; they were preserved untouched.
+
+## Evidence
+
+- Status: completed
+- Summary: Implemented Phase 1.4 importer: extractPhased (H1/H2/H3 headings as groups, indented checkboxes as leaves), extractFlat (top-level checkboxes only), extractPlan (auto-detect), and ModelProposalHook type-only interface. All produce NormalizeInput with empty activation fields. Deterministic: same markdown always yields identical output. No external calls or model invocations.
+- Changes:
+  - packages/workflow-core/src/import/extract.ts — extractPhased, extractFlat, extractPlan functions
+  - packages/workflow-core/src/import/types.ts — ModelProposalHook interface (type-only)
+  - packages/workflow-core/src/import/index.ts — barrel re-exports
+  - packages/workflow-core/src/index.ts — added import/index.ts re-export
+  - packages/workflow-core/test/import.test.ts — 12 focused tests across 5 suites
+- Verification:
+  - npm test (workflow-core): 69/69 pass including 12 new import tests
+  - npm run typecheck: clean, zero errors
+  - npm run lint: clean
+  - git diff --check: no whitespace issues
+  - Phased plans: H1/H2/H3 nesting, leaf placement, unknown-line ignoring verified
+  - Flat plans: top-level-only checkbox extraction, indented lines ignored
+  - Determinism: repeated calls produce deepStrictEqual output
+  - ModelProposalHook: type-only, compilable, no runtime model calls
+- Risks:
+  - extractPlan auto-detect keys on any heading presence; edge-case markdown with accidental # lines may mis-classify
+  - Leaf IDs are positional (leaf-N); reordering source lines changes IDs
+- Next actions:
+  - Phase 1.5: wire importer output into normalize pipeline
+  - Phase 8.2 (adapter-side): implement actual ModelProposalHook with model calls
