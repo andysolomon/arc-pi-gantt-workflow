@@ -1,3 +1,7 @@
 export const PACKAGE_NAME = "@arc/workflow-core";
 
 export * from "./model/index.ts";
+export * from "./normalize/index.ts";
+export * from "./validate/index.ts";
+export * from "./render/index.ts";
+export * from "./import/index.ts";
