@@ -1,7 +1,7 @@
 /**
- * Phase 4.2 adapter: wires the production git/npm commands into the pure
- * `workflow-core` integrator, and reuses the shipped `createQuestionBroker`
- * for the integration ask.
+ * Phase 4.3 adapter: wires production git/npm commands into the pure
+ * `workflow-core` integrator, including bounded conflict resolution and reset,
+ * and reuses the shipped `createQuestionBroker` for the integration ask.
  *
  * The adapter is the only place where `node:child_process` and the ARC Pi
  * question broker meet the integrator. Workflow-core stays pure and adapter
@@ -11,9 +11,11 @@ import { spawnSync } from "node:child_process";
 import {
   AFFIRMATIVE_INTEGRATION_LABEL,
   createIntegrator,
+  type GitAutoResolvePort,
   type GitCherryPickPort,
   type GitCommitPort,
   type GitExecResult,
+  type GitResetPort,
   type GitVerifyPort,
   type IntegrateAskerOutcome,
   type IntegrateAskerPort,
@@ -100,7 +102,15 @@ function makeProcessCherryPickPort(invoker: ProcessInvoker): GitCherryPickPort {
         { cwd: repositoryRoot },
       );
       if (result.exit_code !== 0) {
-        return { ok: false, result };
+        const conflicts = invoker.run(
+          "git",
+          ["-C", repositoryRoot, "diff", "--name-only", "--diff-filter=U"],
+          { cwd: repositoryRoot },
+        );
+        const conflictedFiles = conflicts.exit_code === 0
+          ? conflicts.stdout.split("\n").map((file) => file.trim()).filter(Boolean)
+          : [];
+        return { ok: false, result, conflictedFiles };
       }
       const commitResult = invoker.run(
         "git",
@@ -108,6 +118,43 @@ function makeProcessCherryPickPort(invoker: ProcessInvoker): GitCherryPickPort {
         { cwd: repositoryRoot },
       );
       return { ok: commitResult.exit_code === 0, result: commitResult };
+    },
+  };
+}
+
+function makeProcessAutoResolvePort(invoker: ProcessInvoker): GitAutoResolvePort {
+  return {
+    async autoResolve({ repositoryRoot, strategy, conflictedFiles }) {
+      const strategyResult = strategy === "rerere"
+        ? invoker.run("git", ["-C", repositoryRoot, "rerere"], { cwd: repositoryRoot })
+        : invoker.run(
+            "git",
+            ["-C", repositoryRoot, "checkout", `--${strategy}`, "--", ...conflictedFiles],
+            { cwd: repositoryRoot },
+          );
+      if (strategyResult.exit_code !== 0) {
+        return { ok: false, result: strategyResult };
+      }
+
+      const addResult = invoker.run(
+        "git",
+        ["-C", repositoryRoot, "add", "--", ...conflictedFiles],
+        { cwd: repositoryRoot },
+      );
+      return { ok: addResult.exit_code === 0, result: addResult };
+    },
+  };
+}
+
+function makeProcessResetPort(invoker: ProcessInvoker): GitResetPort {
+  return {
+    async reset(repositoryRoot) {
+      const result = invoker.run(
+        "git",
+        ["-C", repositoryRoot, "reset", "--hard", "HEAD~1"],
+        { cwd: repositoryRoot },
+      );
+      return { ok: result.exit_code === 0, result };
     },
   };
 }
@@ -186,8 +233,11 @@ export function createIntegratorAdapter(
     commitSubject: options.commitSubject,
     git: {
       verify: makeProcessVerifyPort(invoker, verifyCommand),
+      integrationVerify: makeProcessVerifyPort(invoker, verifyCommand),
       commit: makeProcessCommitPort(invoker),
       cherryPick: makeProcessCherryPickPort(invoker),
+      autoResolve: makeProcessAutoResolvePort(invoker),
+      reset: makeProcessResetPort(invoker),
     },
     asker: makeBrokerAsker(broker),
     ...(options.integration !== undefined ? { integration: options.integration } : {}),
@@ -199,5 +249,12 @@ export function createIntegratorAdapter(
   return { integrator, broker };
 }
 
-export { makeBrokerAsker, makeProcessCherryPickPort, makeProcessCommitPort, makeProcessVerifyPort };
+export {
+  makeBrokerAsker,
+  makeProcessAutoResolvePort,
+  makeProcessCherryPickPort,
+  makeProcessCommitPort,
+  makeProcessResetPort,
+  makeProcessVerifyPort,
+};
 export type { GitExecResult, IntegrateAskerOutcome, IntegrateAskerPort, IntegrateOptions, Integrator };

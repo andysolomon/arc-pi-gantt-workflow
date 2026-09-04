@@ -1,5 +1,6 @@
 /**
- * Phase 4.2: verify → local commit → ask → cherry-pick.
+ * Phase 4.3: verify → local commit → ask → cherry-pick, then resolve
+ * conflicts within a bounded loop and rerun checks in the integration checkout.
  *
  * The integrator is a pure orchestrator. Every external operation is an
  * injected port; the module never imports `node:fs`, `node:child_process`, the
@@ -13,7 +14,9 @@
  *                          received an answer; the answer just wasn't
  *                          affirmative.)
  *   - ask broker fails  → result.ok=false, phase="ask", no cherry-pick.
- *   - cherry-pick fails → result.ok=false, phase="cherry_pick".
+ *   - conflict exhausts → reset, result.ok=false, phase="auto_resolve".
+ *   - integration checks fail → reset, result.ok=false,
+ *                                phase="verify_integration".
  *
  * Mandatory-gate semantics (gate="integration") are inherited from the broker:
  * the broker never auto-approves, so a timeout on the ask path surfaces as a
@@ -32,6 +35,7 @@ import type {
   IntegrateFailure,
   IntegrateIntegrationResolution,
   IntegrateResult,
+  IntegrationAutoResolveStrategy,
   Integrator,
 } from "./types.ts";
 
@@ -41,6 +45,15 @@ export type { IntegrateAskerOutcome };
 
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 const ITEM_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$/;
+const AUTO_RESOLVE_STRATEGIES: readonly IntegrationAutoResolveStrategy[] = [
+  "theirs",
+  "ours",
+  "rerere",
+  "off",
+];
+const DEFAULT_AUTO_RESOLVE_STRATEGY = "theirs" as const;
+const DEFAULT_MAX_AUTO_RESOLVE_ATTEMPTS = 2;
+const MAX_AUTO_RESOLVE_ATTEMPTS = 2;
 
 function requireSlug(value: string, field: string): string {
   if (typeof value !== "string" || !SLUG_PATTERN.test(value)) {
@@ -127,9 +140,39 @@ function normalizeOptions(options: CreateIntegratorOptions): CreateIntegratorOpt
   }
   if (options.git === undefined) throw new TypeError("git ports are required");
   if (typeof options.git.verify?.verify !== "function") throw new TypeError("git.verify is required");
+  if (
+    options.git.integrationVerify !== undefined
+    && typeof options.git.integrationVerify.verify !== "function"
+  ) {
+    throw new TypeError("git.integrationVerify must implement verify");
+  }
   if (typeof options.git.commit?.commit !== "function") throw new TypeError("git.commit is required");
   if (typeof options.git.cherryPick?.cherryPick !== "function") throw new TypeError("git.cherryPick is required");
+  if (options.git.autoResolve !== undefined && typeof options.git.autoResolve.autoResolve !== "function") {
+    throw new TypeError("git.autoResolve must implement autoResolve");
+  }
+  if (options.git.reset !== undefined && typeof options.git.reset.reset !== "function") {
+    throw new TypeError("git.reset must implement reset");
+  }
   if (typeof options.asker?.ask !== "function") throw new TypeError("asker.ask is required");
+  const autoResolve = options.integration?.auto_resolve;
+  if (
+    autoResolve?.strategy !== undefined
+    && !AUTO_RESOLVE_STRATEGIES.includes(autoResolve.strategy)
+  ) {
+    throw new TypeError(`integration.auto_resolve.strategy is invalid: ${autoResolve.strategy}`);
+  }
+  if (autoResolve?.maxAttempts !== undefined) {
+    if (
+      !Number.isInteger(autoResolve.maxAttempts)
+      || autoResolve.maxAttempts < 0
+      || autoResolve.maxAttempts > MAX_AUTO_RESOLVE_ATTEMPTS
+    ) {
+      throw new RangeError(
+        `integration.auto_resolve.maxAttempts must be an integer from 0 to ${MAX_AUTO_RESOLVE_ATTEMPTS}`,
+      );
+    }
+  }
   return options;
 }
 
@@ -142,6 +185,10 @@ export function createIntegrator(rawOptions: CreateIntegratorOptions): Integrato
   const options = normalizeOptions(rawOptions);
   const now = options.now ?? (() => new Date());
   const createQuestionId = options.createQuestionId ?? defaultQuestionIdFactory(now);
+  const autoResolveStrategy =
+    options.integration?.auto_resolve?.strategy ?? DEFAULT_AUTO_RESOLVE_STRATEGY;
+  const maxAutoResolveAttempts =
+    options.integration?.auto_resolve?.maxAttempts ?? DEFAULT_MAX_AUTO_RESOLVE_ATTEMPTS;
 
   async function run(): Promise<IntegrateResult> {
     // 1) Verify in the worktree. Failure here short-circuits the whole
@@ -238,43 +285,193 @@ export function createIntegrator(rawOptions: CreateIntegratorOptions): Integrato
       };
     }
 
-    // 4) Cherry-pick. A failure here is terminal for this integration
-    // attempt; the operator will be informed via the next status update.
-    const cherryOutcome = await options.git.cherryPick.cherryPick({
+    const cherryPickOptions = {
       commitRef: commitHash,
       integrationBranch: options.integrationBranch,
       repositoryRoot: options.repositoryRoot,
       worktreePath: options.worktreePath,
-    });
-    if (!cherryOutcome.ok) {
-      const failure: IntegrateFailure = {
-        phase: "cherry_pick",
-        reason: "cherry-pick failed",
-        ...(cherryOutcome.result.stderr.length > 0
-          ? { stderr: cherryOutcome.result.stderr }
-          : {}),
-      };
+    } as const;
+
+    // 4) Cherry-pick. The no-conflict path deliberately preserves the Phase
+    // 4.2 result shape byte-for-byte and does not touch any new port.
+    let cherryOutcome = await options.git.cherryPick.cherryPick(cherryPickOptions);
+
+    if (cherryOutcome.ok) {
       return {
-        ok: false,
+        ok: true,
         phase: "cherry_pick",
         verify: { ok: true, exit_code: verifyOutcome.result.exit_code },
         commit: { hash: commitHash },
         integration: integrationResolution,
-        failure,
+        cherryPicked: {
+          branch: options.integrationBranch,
+          commitRef: commitHash,
+        },
       };
     }
 
-    return {
-      ok: true,
-      phase: "cherry_pick",
-      verify: { ok: true, exit_code: verifyOutcome.result.exit_code },
-      commit: { hash: commitHash },
-      integration: integrationResolution,
-      cherryPicked: {
-        branch: options.integrationBranch,
-        commitRef: commitHash,
-      },
+    let conflictedFiles = [...(cherryOutcome.conflictedFiles ?? [])];
+    let attempts = 0;
+
+    const resetIntegration = async (): Promise<{
+      readonly ok: boolean;
+      readonly stderr?: string;
+    }> => {
+      if (options.git.reset === undefined) {
+        return { ok: false, stderr: "git.reset port is required after an integration failure" };
+      }
+      try {
+        const resetOutcome = await options.git.reset.reset(options.repositoryRoot);
+        return {
+          ok: resetOutcome.ok,
+          ...(!resetOutcome.ok && resetOutcome.result.stderr.length > 0
+            ? { stderr: resetOutcome.result.stderr }
+            : {}),
+        };
+      } catch (err) {
+        return { ok: false, stderr: err instanceof Error ? err.message : String(err) };
+      }
     };
+
+    const autoResolveFailure = async (
+      reason: "auto_resolve_disabled" | "auto_resolve_exhausted",
+      stderr?: string,
+    ): Promise<IntegrateResult> => {
+      const resetOutcome = await resetIntegration();
+      const resetFailed = !resetOutcome.ok;
+      const failureStderr = resetFailed ? resetOutcome.stderr : stderr;
+      const failure: IntegrateFailure = {
+        phase: "auto_resolve",
+        reason: resetFailed ? "reset_failed" : reason,
+        ...(failureStderr !== undefined ? { stderr: failureStderr } : {}),
+      };
+      return {
+        ok: false,
+        phase: "auto_resolve",
+        verify: { ok: true, exit_code: verifyOutcome.result.exit_code },
+        commit: { hash: commitHash },
+        integration: integrationResolution,
+        conflict: {
+          conflictedFiles,
+          strategy: autoResolveStrategy,
+          attempts,
+          maxAttempts: maxAutoResolveAttempts,
+        },
+        needsReplan: true,
+        reverted: resetOutcome.ok,
+        failure,
+      };
+    };
+
+    if (autoResolveStrategy === "off" || maxAutoResolveAttempts === 0) {
+      return autoResolveFailure("auto_resolve_disabled", cherryOutcome.result.stderr);
+    }
+
+    // 5) Resolve and retry within the configured hard bound. The port is
+    // optional for Phase 4.2 callers; absence fails closed and proceeds to the
+    // same reset path as exhausted retries.
+    let lastAutoResolveStderr = cherryOutcome.result.stderr;
+    while (attempts < maxAutoResolveAttempts) {
+      attempts += 1;
+      if (options.git.autoResolve === undefined) break;
+
+      const resolved = await options.git.autoResolve.autoResolve({
+        repositoryRoot: options.repositoryRoot,
+        strategy: autoResolveStrategy,
+        conflictedFiles,
+        attempt: attempts,
+      });
+      if (!resolved.ok) {
+        lastAutoResolveStderr = resolved.result.stderr;
+        continue;
+      }
+
+      cherryOutcome = await options.git.cherryPick.cherryPick(cherryPickOptions);
+      if (cherryOutcome.ok) {
+        // 6) Any automatically-resolved integration must pass the full suite
+        // in the integration checkout, never in the leaf worktree.
+        const integrationVerify = options.git.integrationVerify === undefined
+          ? {
+              ok: false,
+              result: {
+                exit_code: -1,
+                stdout: "",
+                stderr: "git.integrationVerify port is required after automatic resolution",
+              },
+            }
+          : await options.git.integrationVerify.verify(options.repositoryRoot);
+        if (integrationVerify.ok) {
+          return {
+            ok: true,
+            phase: "verify_integration",
+            verify: { ok: true, exit_code: verifyOutcome.result.exit_code },
+            commit: { hash: commitHash },
+            integration: integrationResolution,
+            cherryPicked: {
+              branch: options.integrationBranch,
+              commitRef: commitHash,
+            },
+            conflict: {
+              conflictedFiles,
+              strategy: autoResolveStrategy,
+              attempts,
+              maxAttempts: maxAutoResolveAttempts,
+            },
+            integrationVerified: {
+              ok: true,
+              exit_code: integrationVerify.result.exit_code,
+              reverted: false,
+            },
+            needsReplan: false,
+            reverted: false,
+          };
+        }
+
+        const resetOutcome = await resetIntegration();
+        const failure: IntegrateFailure = {
+          phase: "verify_integration",
+          reason: resetOutcome.ok ? "checks_failed" : "reset_failed",
+          ...((resetOutcome.ok
+            ? integrationVerify.result.stderr
+            : resetOutcome.stderr) !== undefined
+            && (resetOutcome.ok
+              ? integrationVerify.result.stderr
+              : resetOutcome.stderr)!.length > 0
+            ? {
+                stderr: resetOutcome.ok
+                  ? integrationVerify.result.stderr
+                  : resetOutcome.stderr,
+              }
+            : {}),
+        };
+        return {
+          ok: false,
+          phase: "verify_integration",
+          verify: { ok: true, exit_code: verifyOutcome.result.exit_code },
+          commit: { hash: commitHash },
+          integration: integrationResolution,
+          conflict: {
+            conflictedFiles,
+            strategy: autoResolveStrategy,
+            attempts,
+            maxAttempts: maxAutoResolveAttempts,
+          },
+          integrationVerified: {
+            ok: false,
+            exit_code: integrationVerify.result.exit_code,
+            reverted: resetOutcome.ok,
+          },
+          needsReplan: true,
+          reverted: resetOutcome.ok,
+          failure,
+        };
+      }
+
+      conflictedFiles = [...(cherryOutcome.conflictedFiles ?? conflictedFiles)];
+      lastAutoResolveStderr = cherryOutcome.result.stderr;
+    }
+
+    return autoResolveFailure("auto_resolve_exhausted", lastAutoResolveStderr);
   }
 
   return { run };
