@@ -10,4 +10,15 @@ export type {
   ChildProfile,
   ChildProfileId,
   ParentModelSelection,
+  AcquireInput,
+  AcquiredSession,
+  PersistedPiSession,
+  PiSessionFactory,
+  SessionLifecycleOptions,
+  SessionMetadataStore,
+  SessionRecord,
+} from "./sessions/index.ts";
+export {
+  SessionLifecycle,
+  createSessionLifecycle,
 } from "./sessions/index.ts";
