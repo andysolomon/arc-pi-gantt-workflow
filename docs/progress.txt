@@ -1,8 +1,8 @@
 arc-pi-gantt-workflow - ARC Pi Gantt Workflow - Progress
-Generated: 2026-09-02 22:03:03 EDT
+Generated: 2026-09-04 01:22:06 EDT
 Plan: docs/IMPLEMENTATION_PLAN.md
 Source artifact: docs/gantt-workflow/plan.md
-Status: Phase 2.3 verified (scheduler); Phase 2 remains in progress. M1 (Phase 5) still gates Phases 6-9.
+Status: Phase 2 complete (journal, events, scheduler verified); Phase 3 partial (3.1, 3.2 shipped; 3.3, 3.4 pending); Phase 4 partial (4.1 shipped; 4.2-4.4 pending). M1 (Phase 5) still gates Phases 6-9.
 Task slug: gantt-workflow
 Settled decisions: ARC Decision Ledger semanticKey prefix arc-workflow.*
 This tracker is not Implement or Deploy authorization. Each leaf needs its own exact Implement contract.
@@ -27,12 +27,12 @@ On completion, move this file and the plan to docs/archive/.
 
 [ ] 3.0 - Phase 3 - Sessions, questions, orchestrator bridge
     [x] 3.1 - Four child profiles; exclude workflow extension and nested subagents
-    [ ] 3.2 - Persisted in-process AgentSession per leaf; reopen after restart
+    [x] 3.2 - Persisted in-process AgentSession per leaf; reopen after restart (#6)
     [ ] 3.3 - Question broker via arc_ask_operator only; fail-closed mandatory gates
     [ ] 3.4 - Orchestrator bridge (runner unchanged; wrap live-activity events)
 
 [ ] 4.0 - Phase 4 - Isolation and integration
-    [ ] 4.1 - Worktree manager (default: worktree per writing item)
+    [x] 4.1 - Worktree manager (default: worktree per writing item) (#7)
     [ ] 4.2 - Verify, local commit, ask, cherry-pick
     [ ] 4.3 - Automatic conflict resolution then full workflow checks
     [ ] 4.4 - Completion + atomic progress update + optional risk-based review
