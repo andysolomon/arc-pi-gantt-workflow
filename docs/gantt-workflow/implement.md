@@ -167,3 +167,25 @@
   - The worktree contained unrelated pre-existing modifications and untracked files; they were preserved untouched.
 - Next actions:
   - Parent can perform the formal Verify phase and update status/checkbox documentation afterward.
+
+## Evidence
+
+- Status: completed
+- Summary: Implemented Phase 4.2 verify→commit→ask→cherry-pick. Pure workflow-core/src/integrate/integrate.ts with injected ports + arc-pi-adapter/src/integrate/ wiring real git CLI and shipped broker. Mandatory gate=integration fails closed (no cherry-pick on timeout or denial; no cherry-pick if verify fails). 33 new tests pass (20 workflow-core + 13 adapter). typecheck/lint clean; git diff --check clean.
+- Changes:
+  - packages/workflow-core/src/integrate/types.ts (new): IntegrateOptions, IntegrateResult, IntegrateAskerOutcome, Git* ports, AFFIRMATIVE_INTEGRATION_LABEL
+  - packages/workflow-core/src/integrate/integrate.ts (new): createIntegrator pure module; verify → commit → build v1 QuestionEventEnvelope with gate=integration → broker ask → cherry-pick on approval only
+  - packages/workflow-core/src/integrate/index.ts: preserved worktree-manager export; added integrate exports
+  - packages/workflow-core/test/integrate.test.ts (new): 20 tests covering all failure modes and the affirmative path
+  - packages/arc-pi-adapter/src/integrate/index.ts (new): createIntegratorAdapter wiring spawnSync-based git ports and shipped createQuestionBroker; maps BrokerResult→IntegrateAskerOutcome
+  - packages/arc-pi-adapter/test/integrate.test.ts (new): 13 tests covering process invoker, broker adapter, and full happy/decline paths
+- Verification:
+  - workflow-core tests: 125/125 pass (was 105 before 4.2)
+  - arc-pi-adapter tests: 78/78 pass
+  - npm run typecheck: exit 0
+  - npm run lint: 2 pre-existing errors in shipped files (#9, #10); 0 in new code
+  - git diff --check: clean
+  - File scope: only the 6 files listed; no shipped module touched
+- Risks:
+  - Lint errors in shipped live-activity.ts and broker.ts pre-exist (PR #9, #10); not introduced by 4.2
+  - Cherry-pick port uses git --no-commit then commit; if a pre-commit hook fails the follow-up commit surfaces as cherry-pick failure
