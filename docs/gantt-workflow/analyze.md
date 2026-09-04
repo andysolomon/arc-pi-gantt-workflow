@@ -19,3 +19,26 @@
   - Show contracts to operator and request Implement approval.
   - Delegate both Implement calls in parallel via arc_delegate with implement_authorized=true, task_slug=gantt-workflow, assumption_refs referencing arc-workflow.assumption.extension-id.
   - Run Verify on both completed Implement results.
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.2 analyze: verify → local commit → ask → cherry-pick, owns integrate + adapter glue. 4.1 WorktreeManager (port-based) and 3.3 question broker (mandatory gates never auto-approve) shipped on main. Plan: add a pure workflow-core/src/integrate/integrate.ts with injected git ports (verify/commit/cherry-pick) and arc-pi-adapter/src/integrate/ wiring the real git CLI plus the broker. gate=integration mandatory; timeout fails closed. Proposing medium-heavy workload.
+- Changes:
+  - Confirmed 4.1 WorktreeManager API and 3.3 broker API on main
+  - Proposed pure workflow-core/src/integrate/integrate.ts with verify/commit/cherry-pick ports
+  - Proposed arc-pi-adapter/src/integrate/ wiring child_process git + broker
+  - Proposed unit tests: verify-fail-no-commit, verify-ok-commit, timeout-no-cherry-pick, deny-no-cherry-pick, affirmative-cherry-pick
+  - Proposed file ownership: integrate/ (workflow-core) + arc-pi-adapter/src/integrate/ + matching tests only
+- Verification:
+  - npm test -w @arc/workflow-core and npm test -w @arc/pi-workflow pass
+  - npm run typecheck and npm run lint clean
+  - git diff --check clean
+- Risks:
+  - Must reuse WorktreeManager.acquire result, not parallel paths
+  - Cherry-pick question must build valid v1 QuestionEventEnvelope with EVENT_ENVELOPE_VERSION
+  - Journal must record the integration answer with provenance
+- Next actions:
+  - Show operator exact Implement contract + workload_class=medium-heavy
+  - After approval create worktree feat/wf-4-2-verify-commit-cherry-pick off origin/main
+  - Delegate Implement via arc_delegate
