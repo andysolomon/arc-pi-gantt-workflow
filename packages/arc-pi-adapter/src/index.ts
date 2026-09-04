@@ -39,7 +39,6 @@ export type {
   BrokerResolution,
   BrokerResult,
   BrokerSuccess,
-  EventEnvelope,
   EventGate,
   MandatoryBrokerGate,
   QuestionBroker,
@@ -47,3 +46,36 @@ export type {
   QuestionBrokerOptions,
   QuestionEventEnvelope,
 } from "./questions/index.ts";
+
+export {
+  createOrchestratorBridge,
+  parseLiveActivityLine,
+  resolveRunnerBinary,
+  buildInvocation,
+  defaultInvoker,
+  LIVE_ACTIVITY_EVENT_PREFIX,
+  LIVE_ACTIVITY_KNOWN_VERSIONS,
+  LIVE_ACTIVITY_KINDS_V1,
+  LIVE_ACTIVITY_KINDS_V2,
+} from "./orchestrator/index.ts";
+export type {
+  OrchestratorBridge,
+  OrchestratorBridgeOptions,
+  BridgeContext,
+  BridgeJournal,
+  LiveActivityLine,
+  LiveActivityParseResult,
+  LiveActivityVersion,
+  LiveActivityKindV1,
+  LiveActivityKindV2,
+  RunnerBinaryResolution,
+  RunnerInvocation,
+  RunnerInvoker,
+  EventKind,
+  EventProvenance,
+} from "./orchestrator/index.ts";
+
+// EventEnvelope is re-exported from both modules, but the underlying type is
+// the same. Export it once from the questions module so adapter callers see
+// a single canonical name.
+export type { EventEnvelope } from "./questions/index.ts";
