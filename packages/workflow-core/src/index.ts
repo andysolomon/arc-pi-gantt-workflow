@@ -8,3 +8,4 @@ export * from "./journal/index.ts";
 export * from "./events/index.ts";
 export * from "./import/index.ts";
 export * from "./schedule/index.ts";
+export * from "./integrate/index.ts";
