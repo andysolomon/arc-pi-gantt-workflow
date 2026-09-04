@@ -223,7 +223,12 @@ export function parseDocument(text: string): ParsedDocument | null {
   }
 
   const decodedSource = decodeSource(source);
-  if (decodedSource === undefined) return null;
+  if (
+    decodedSource === undefined ||
+    encodeSource(decodedSource) !== source
+  ) {
+    return null;
+  }
 
   return {
     provenance: {

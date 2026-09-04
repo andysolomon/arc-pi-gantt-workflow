@@ -230,7 +230,7 @@ test("gantt titles cannot emit Mermaid comment lines", () => {
 
   assert.ok(body.includes("percentpercent hidden 100percent [ready]"));
   assert.equal(
-    body.split("\\n").some((line) => /^\\s*%%/u.test(line)),
+    body.split("\n").some((line) => /^\s*%%/u.test(line)),
     false,
   );
 });
@@ -346,6 +346,25 @@ test("source provenance round-trips without sentinel or escape collisions", () =
     assert.ok(!serialized.has(sourceLine), `source collision for ${JSON.stringify(source)}`);
     serialized.add(sourceLine);
     assert.equal(parseDocument(rendered.text)?.provenance.source, source ?? null);
+  }
+});
+
+test("source provenance must use the renderer's canonical encoding", () => {
+  const rendered = renderProgressText(fixture(), { ...CONTEXT, source: "source" });
+  const alternateEscaping = rendered.text.replace(
+    'source: "source"',
+    String.raw`source: "\u0073ource"`,
+  );
+  const trailingWhitespace = rendered.text.replace(
+    'source: "source"',
+    'source: "source" ',
+  );
+
+  for (const edited of [alternateEscaping, trailingWhitespace]) {
+    assert.equal(parseDocument(edited), null);
+    const report = checkDrift(edited, rendered);
+    assert.equal(report.status, "unrecognized");
+    assert.equal(report.safe_to_overwrite, false);
   }
 });
 
