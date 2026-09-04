@@ -114,3 +114,56 @@
 - Next actions:
   - Phase 1.5: wire importer output into normalize pipeline
   - Phase 8.2 (adapter-side): implement actual ModelProposalHook with model calls
+
+## Evidence
+
+- Status: completed
+- Summary: Added a pure, side-effect-free v1 event-envelope module to workflow-core: types/constants, validateEventEnvelope with deterministic sorted diagnostics, assertEventEnvelope, gate helpers, and a UTF-8 32768-byte payload bound stricter than the schema's code-point maxLength. 17 new tests; full suite, typecheck, lint, and diff --check pass. Schema unchanged (no mismatch required one).
+- Changes:
+  - packages/workflow-core/src/events/types.ts (new): EVENT_ENVELOPE_VERSION 1.0.0, EVENT_KINDS, EVENT_GATES, MANDATORY_EVENT_GATES, MAX_EVENT_PAYLOAD_BYTES=32768, EventEnvelope/QuestionEventEnvelope/diagnostic/result types
+  - [absolute path redacted]
+  - packages/workflow-core/src/events/index.ts (new): explicit barrel with a docblock stating the module does no fs, journal, question, or session work
+  - packages/workflow-core/test/events.test.ts (new): 17 tests incl. two ajv parity tests against schema/event-envelope.schema.json
+  - packages/workflow-core/src/index.ts: added one line, export * from "./events/index.ts"
+  - packages/workflow-core/schema/event-envelope.schema.json: unchanged (git status on schema/ is empty)
+- Verification:
+  - Focused: node --test test/events.test.ts -> 17/17 pass
+  - Full: npm test (root) -> workflow-core 96/96 pass, arc-pi-adapter 13/13 pass, 0 fail
+  - npm run typecheck -> exit 0; npm run lint -> exit 0; git diff --check -> exit 0
+  - Valid examples accept: examples/event-envelope/valid-question.json and valid-progress.json, payload_bytes matches Buffer.byteLength of JSON payload
+  - Unknown versions reject (2.0.0, 1.0.1, 1, non-strings) with a single unsupported_version diagnostic; missing version -> missing_field; non-objects -> invalid_envelope
+  - Oversized rejects by UTF-8 bytes: 20000 multi-byte chars reject while 20000 ASCII chars accept (schema maxLength alone would allow both)
+  - Extra fields reject at $, $.payload, $.provenance, $.payload.options[i]; question requires question_id/text/options/gate; default_on_timeout rejected for all 4 mandatory gates, accepted for gate=none
+  - Ad-hoc 75-case ajv sweep (temp script, deleted): only 4 divergences remain, all impl-stricter-than-schema (byte bound x2, space separator, colon-less offset); a test locks that everything the module accepts the schema also accepts
+- Risks:
+  - Date-time validation is intentionally stricter than ajv-formats: it rejects space separators, colon-less offsets, and leap seconds (23:59:60). Emitters using Date#toISOString are unaffected.
+  - Payload byte bound counts JSON.stringify(payload) including keys/punctuation, so a summary near 32768 chars can exceed the bound; this is the intended stricter check but is tighter than a raw text-only measure.
+  - default_on_timeout with no gate at all is accepted, matching the schema's conditional; Phase 3.3 may want to require an explicit gate.
+  - validateEventEnvelope returns the caller's object rather than a frozen copy, so callers must not mutate a validated envelope and assume it stays valid.
+- Next actions:
+  - Verify phase: re-run npm test, typecheck, lint, and review the diff; only then update docs/IMPLEMENTATION_PLAN.md and docs/progress.txt for 2.2
+  - Phase 3.3 question broker can consume isQuestionEventEnvelope + isMandatoryEventGate for fail-closed gate handling
+  - Consider whether default_on_timeout should be required to match one of the option labels; that is a schema-level decision, not made here
+
+## Evidence
+
+- Status: completed
+- Summary: Implemented the pure workflow-core scheduler with fail-closed ready-set computation, bounded concurrency, configurable wait behavior, deterministic critical-path calculation, hybrid question prioritization, and UI override.
+- Changes:
+  - packages/workflow-core/src/schedule/types.ts: added scheduler, wait-policy, and queue types.
+  - packages/workflow-core/src/schedule/schedule.ts: added readiness, concurrency, waiting, critical-path, and question-priority logic.
+  - packages/workflow-core/src/schedule/index.ts: added scheduler public barrel.
+  - packages/workflow-core/src/index.ts: added the minimal scheduler export while preserving existing exports.
+  - packages/workflow-core/test/schedule.test.ts: added 6 focused scheduler and purity tests.
+- Verification:
+  - Focused scheduler tests passed: 6/6.
+  - All repository tests passed: workflow-core 105/105; adapter 13/13.
+  - npm run typecheck passed.
+  - npm run lint passed.
+  - git diff --check passed from repository root.
+  - Purity scan found no filesystem, Pi/adapter, session, delegate, or model-call imports in schedule source.
+  - Final status inspection confirmed no scheduler changes outside the allowed files.
+- Risks:
+  - The worktree contained unrelated pre-existing modifications and untracked files; they were preserved untouched.
+- Next actions:
+  - Parent can perform the formal Verify phase and update status/checkbox documentation afterward.
