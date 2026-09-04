@@ -22,3 +22,28 @@ export {
   SessionLifecycle,
   createSessionLifecycle,
 } from "./sessions/index.ts";
+
+export {
+  createQuestionBroker,
+  EVENT_ENVELOPE_VERSION,
+  isMandatoryBrokerGate,
+  MANDATORY_BROKER_GATES,
+} from "./questions/index.ts";
+export type {
+  AskOperatorFn,
+  AskOperatorInput,
+  BrokerAnswer,
+  BrokerFailure,
+  BrokerFailureReason,
+  BrokerJournal,
+  BrokerResolution,
+  BrokerResult,
+  BrokerSuccess,
+  EventEnvelope,
+  EventGate,
+  MandatoryBrokerGate,
+  QuestionBroker,
+  QuestionBrokerConfig,
+  QuestionBrokerOptions,
+  QuestionEventEnvelope,
+} from "./questions/index.ts";
