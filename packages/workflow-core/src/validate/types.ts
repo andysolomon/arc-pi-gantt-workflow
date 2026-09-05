@@ -52,3 +52,51 @@ export interface WorkflowValidationResult {
   /** Activation readiness in source order. This does not update checkpoints. */
   readonly readiness: readonly LeafReadiness[];
 }
+
+export type WorkflowEditFailureReason =
+  | "invalid_current_workflow"
+  | "invalid_candidate_workflow"
+  | "malformed_yaml";
+
+export interface WorkflowEditDiagnostic {
+  readonly source: "current" | "candidate" | "yaml";
+  readonly code: ValidationDiagnosticCode | "malformed_yaml";
+  readonly path: string;
+  readonly message: string;
+}
+
+export interface RevalidateWorkflowEditOptions extends ValidateWorkflowOptions {
+  /** Live state is private runtime data and is therefore supplied by the adapter. */
+  readonly active_item_ids?: readonly string[];
+}
+
+/** Stable, source-ordered impact summary for an accepted workflow edit. */
+export interface WorkflowEditImpact {
+  readonly workflow_metadata_changed: boolean;
+  readonly added_item_ids: readonly string[];
+  readonly removed_item_ids: readonly string[];
+  readonly semantically_changed_item_ids: readonly string[];
+  readonly transitive_dependent_item_ids: readonly string[];
+  readonly affected_item_ids: readonly string[];
+  readonly active_item_ids: readonly string[];
+  readonly terminal_item_ids: readonly string[];
+  readonly completed_item_ids: readonly string[];
+  readonly affects_active_work: boolean;
+  readonly affects_terminal_work: boolean;
+}
+
+export interface AcceptedWorkflowEdit {
+  readonly accepted: true;
+  /** A detached candidate with checkpoints restored for unchanged items. */
+  readonly workflow: import("../model/workflow.ts").Workflow;
+  readonly impact: WorkflowEditImpact;
+  readonly validation: WorkflowValidationResult;
+}
+
+export interface RejectedWorkflowEdit {
+  readonly accepted: false;
+  readonly reason: WorkflowEditFailureReason;
+  readonly diagnostics: readonly WorkflowEditDiagnostic[];
+}
+
+export type WorkflowEditResult = AcceptedWorkflowEdit | RejectedWorkflowEdit;
