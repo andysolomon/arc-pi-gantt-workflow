@@ -9,3 +9,4 @@ export * from "./events/index.ts";
 export * from "./import/index.ts";
 export * from "./schedule/index.ts";
 export * from "./integrate/index.ts";
+export * from "./recovery/index.ts";
