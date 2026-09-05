@@ -1,0 +1,4 @@
+// Placeholder so the integration test can clone an empty `src/` directory
+// into the disposable repo before the leaf runs. The leaf's contract is to
+// create `greeting.ts`; this file is removed (or replaced) by the simulated
+// implement step so the post-leaf state contains exactly the new module.

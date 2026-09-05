@@ -12,10 +12,18 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./run-sequential": {
+      "types": "./src/run-sequential.ts",
+      "import": "./src/run-sequential.ts"
     }
   },
   "scripts": {
-    "test": "node --test --test-isolation=none --test-reporter spec test/*.test.ts",
+    "test": "node --test --test-isolation=none --test-reporter spec test/*.test.ts test/integration/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@arc/workflow-core": "*",
+    "yaml": "^2.8.1"
   }
 }

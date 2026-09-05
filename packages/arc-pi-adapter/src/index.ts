@@ -79,3 +79,21 @@ export type {
 // the same. Export it once from the questions module so adapter callers see
 // a single canonical name.
 export type { EventEnvelope } from "./questions/index.ts";
+
+export {
+  createFsAtomicWorkflowWriter,
+  executeCompletion,
+  noRiskReview,
+} from "./complete/index.ts";
+export type {
+  AtomicWriteContents,
+  AtomicWriteResult,
+  AtomicWorkflowWriter,
+  CompletionDecision,
+  CompletionFileSystem,
+  ExecuteCompletionOptions,
+  RiskReviewInput,
+  RiskReviewOutcome,
+  RiskReviewPort,
+  WorkflowPaths,
+} from "./complete/index.ts";

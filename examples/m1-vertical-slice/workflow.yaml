@@ -1,0 +1,48 @@
+schema_version: "1"
+slug: m1-vertical-slice
+repository:
+  id: m1-fixture
+  path: .
+items:
+  - id: "5.0"
+    kind: group
+    title: M1 sequential vertical slice
+    parent_id: null
+    nesting_depth: 0
+    dependencies: []
+    checkpoint:
+      state: ready
+      updated_at: "2026-09-04T00:00:00.000Z"
+  - id: "5.bootstrap"
+    kind: leaf
+    title: Bootstrap the disposable repo
+    parent_id: "5.0"
+    nesting_depth: 1
+    outcome: The disposable repo under examples/m1-vertical-slice/repo is initialised, has its verify command target in place, and is committed on the integration branch.
+    scope: examples/m1-vertical-slice/repo
+    acceptance_criteria:
+      - "examples/m1-vertical-slice/repo/test/greeting.test.mjs imports ../src/greeting.ts"
+      - "the integration branch contains a seed commit with the fixture repo"
+    dependencies: []
+    preserved_behavior: No remote push, GitHub mutation, or deploy. The repo lives entirely under examples/m1-vertical-slice/repo.
+    checkpoint:
+      state: completed
+      updated_at: "2026-09-04T00:00:00.000Z"
+  - id: "5.1"
+    kind: leaf
+    title: Add greeting utility and verify it loads
+    parent_id: "5.0"
+    nesting_depth: 1
+    outcome: A new module exposes a `greet(name)` function that returns the string `"hello, <name>"`, and the test suite passes.
+    scope: examples/m1-vertical-slice/repo/src/greeting.ts and the disposable repo's verify command (`node --test repo/test/greeting.test.mjs`).
+    acceptance_criteria:
+      - "examples/m1-vertical-slice/repo/src/greeting.ts exports a `greet` function"
+      - "examples/m1-vertical-slice/repo/test/greeting.test.mjs passes against the new module"
+      - "the verify command exits 0 inside the leaf worktree"
+      - "the verify command exits 0 in the integration checkout after cherry-pick"
+    dependencies:
+      - "5.bootstrap"
+    preserved_behavior: No remote push, GitHub mutation, deploy, or aggregate cost budget. Files outside `examples/m1-vertical-slice/repo/src/` and the existing test file are not touched.
+    checkpoint:
+      state: ready
+      updated_at: "2026-09-04T00:00:00.000Z"

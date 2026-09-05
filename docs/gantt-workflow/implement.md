@@ -253,3 +253,46 @@
 - Next actions:
   - Operator decides on merge or follow-up review.
   - After merge: commit docs follow-up (analyze.md, implement.md, verify.md, progress.txt leaf flip).
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.4 implemented. Workflow-core adds pure completion logic. Adapter adds atomic writer port, RiskReviewPort, and executeCompletion orchestrator.
+- Changes:
+  - packages/workflow-core/src/integrate/complete.ts: pure completion logic
+  - packages/workflow-core/src/integrate/index.ts: exports
+  - packages/workflow-core/test/complete.test.ts: 23 tests
+  - packages/arc-pi-adapter/src/complete/index.ts: writer+review+orchestrator
+  - packages/arc-pi-adapter/src/index.ts: exports
+  - packages/arc-pi-adapter/test/complete.test.ts: 10 tests
+- Verification:
+  - npm test: 253/253 pass (160 workflow-core + 93 adapter)
+  - npm run typecheck: clean
+  - Atomic writer: mid-flight rename failure restores original bytes for all three files
+- Risks:
+  - Risk thresholds default to medium=1 high=2 attempts; ClassifyRiskOptions lets callers override
+- Next actions:
+  - Phase 5.1 M1 fixture workflow
+  - Phase 5.2 sequential runner
+  - Phase 5.3 live ARC integration test
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 5 implemented: M1 vertical slice. M1 fixture, sequential runner, and live ARC integration test all pass locally.
+- Changes:
+  - examples/m1-vertical-slice: M1 fixture workflow and disposable-repo recipe
+  - test/fixtures/m1-vertical-slice: mirrored fixture for the integration test
+  - packages/arc-pi-adapter/src/run-sequential.ts: sequential runner with concurrency forced to 1
+  - packages/arc-pi-adapter/test/run-sequential.test.ts: focused runner construction test
+  - packages/arc-pi-adapter/test/integration/m1-vertical-slice.test.ts: live ARC integration test
+  - packages/arc-pi-adapter/package.json: added yaml dependency for YAML parsing in the test
+- Verification:
+  - npm test: 255/255 pass (160 workflow-core + 95 adapter)
+  - npm run typecheck: clean
+  - Live integration test drives a leaf from ready to completed with atomic YAML+progress.txt+Gantt write
+- Risks:
+  - M1 gate per plan: Phases 6-9 must wait until this test is green in protected CI
+- Next actions:
+  - Phase 7 recovery/restart/cancel
+  - Phase 9 release-ready handoff
