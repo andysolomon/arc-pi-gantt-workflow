@@ -64,3 +64,24 @@
 - Next actions:
   - Delegate Implement via arc_delegate, phase=implement, implement_authorized=true, workload_class=medium-heavy, task_slug=gantt-workflow.
   - Run Verify on completed Implement; surface PR; operator decides on merge.
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 7 Analyze: main at c3f7e57 has Phase 6 done. Phase 7 needs 7.1 Recovery (pure diagnose), 7.2 Restart (reconcile+ask), 7.3 Cancel (stop+ask). Precedent: Phase 6 shipped as one PR; plan file defines exact acceptance for each leaf. gh CLI authenticated. No stale local worktrees; two remote stale branches to delete.
+- Changes:
+  - workflow-core/integrate/worktree-manager.ts exposes WorktreeManager.cancel(preserve|delete) usable by 7.3.
+  - arc-pi-adapter/sessions/lifecycle.ts exposes retain-only SessionLifecycle.archive usable by 7.3.
+  - arc-pi-adapter/questions/broker.ts is the only arc_ask_operator path; mandatory gates fail closed. 7.2 and 7.3 must route through it.
+- Verification:
+  - git log shows Phase 6 merge + feat commit; no Phase 7 work present.
+  - git worktree list shows only main; remote stale branches are merged.
+  - gh auth status confirms repo+workflow scopes.
+  - npm test currently 113/113 passing.
+- Risks:
+  - Eco-mode routes to composer-implement; failing the ask-first ordering for cancel/restart breaks the settled design.
+  - Any path that bypasses the broker violates the only-questioning-system rule.
+- Next actions:
+  - Worktree feat/wf-7-recovery-restart-cancel created at .arc/worktrees/feat-wf-7.
+  - Delegate Implement in eco-mode with task_slug=gantt-workflow, background=true.
+  - After settle: npm test + typecheck, commit, push, open PR, merge.
