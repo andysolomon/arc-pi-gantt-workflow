@@ -2,7 +2,7 @@ arc-pi-gantt-workflow - ARC Pi Gantt Workflow - Progress
 Generated: 2026-09-05 14:00:00 EDT
 Plan: docs/IMPLEMENTATION_PLAN.md
 Source artifact: docs/gantt-workflow/plan.md
-Status: Phases 0-7 complete locally; Phase 7 recovery diagnosis, restart reconciliation, and ordered cancellation are green locally. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
+Status: Phases 0-8 complete locally; Phase 8 live-edit revalidation and fail-closed model-proposal import are green locally. Phase 9 release-ready handoff remains pending. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
 Task slug: gantt-workflow
 Settled decisions: ARC Decision Ledger semanticKey prefix arc-workflow.*
 This tracker is not Implement or Deploy authorization. Each leaf needs its own exact Implement contract.
@@ -52,21 +52,21 @@ On completion, move this file and the plan to docs/archive/.
     [x] 7.2 - Restart: reconcile then ask
     [x] 7.3 - Cancel: stop first, then ask what to preserve
 
-[ ] 8.0 - Phase 8 - Live edits and import proposals
-    [ ] 8.1 - Impact-based revalidation on live YAML edits
-    [ ] 8.2 - Model-proposal importer with confirmed dependencies / parallel-safety
+[x] 8.0 - Phase 8 - Live edits and import proposals
+    [x] 8.1 - Impact-based revalidation on live YAML edits
+    [x] 8.2 - Model-proposal importer with confirmed dependencies / parallel-safety
 
 [ ] 9.0 - Phase 9 - Release-ready handoff
     [ ] 9.1 - Archival (ask keep/delete sessions)
     [ ] 9.2 - Package publish readiness (no remote push/deploy)
     [ ] 9.3 - Operator and user docs (install, /arc-workflow, Pi vs ARC routes)
 
-ASCII Gantt - dependency-wave schedule for remaining work
+ASCII Gantt - dependency-wave schedule
 Legend: == scheduled work  .. inactive  | M1 gate
 Basis: one wave is a dependency slot, not a duration or calendar estimate. Items in
 one wave may run in parallel only after separate Implement approvals and while their
 file ownership remains disjoint. No wave exceeds the settled concurrency cap of 4.
-Phase 0 is already complete. Wave 11 contains the locally verified Phase 6 work under the operator-recorded local-green override; Wave 12 starts recovery and Wave 13 completes restart/cancel. Protected-CI evidence for 5.3 remains outstanding.
+Phases 0-8 are complete locally. Waves 14-16 contain pending Phase 9 handoff work. Protected-CI evidence for 5.3 remains outstanding under the operator-recorded local-green override.
 
 Wave ->                             01 02 03 04 05 06 07 08 09 10 | 11 12 13 14 15 16
 1.1 DAG model + checkpoint states   == .. .. .. .. .. .. .. .. .. | .. .. .. .. .. ..

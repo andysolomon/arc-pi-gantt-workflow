@@ -1,6 +1,6 @@
 # ARC Pi Gantt Workflow — Implementation Plan
 
-**Status:** Phase 6 (parallel Gantt execution) verified locally. Phase 7 is pending. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
+**Status:** Phase 8 (live edits and import proposals) complete locally. Phase 9 is pending. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
 **Source artifact:** `docs/gantt-workflow/plan.md` (Plan worker, 2026-09-03). This file is the human-facing promotion of that artifact, with truncated/redacted lines restored from the Decision Ledger and parent-confirmed sibling seams.
 **Task slug:** `gantt-workflow`
 **Planning mode:** Hybrid greenfield + integration gap
@@ -250,16 +250,16 @@ Every numbered item is an executable leaf. Groups do not launch sessions. Each l
 - **7.2 Restart** — reconcile journal vs YAML vs worktrees, then ask. depends: [7.1].
 - **7.3 Cancel** — stop sessions first, then ask what to preserve. depends: [7.1].
 
-### Phase 8 — Live edits and import proposals
+### Phase 8 — Live edits and import proposals (8.0 complete)
 
-- **8.1 Impact-based revalidation** on live YAML edits. depends: [1.3, 6.1].
-- **8.2 Model-proposal importer** (adapter) — dependencies and parallel-safety must be confirmed via `arc_ask_operator` before any leaf becomes `ready`. depends: [1.4, 3.3].
+- [x] **8.1 Impact-based revalidation** on live YAML edits. depends: [1.3, 6.1].
+- [x] **8.2 Model-proposal importer** (adapter) — dependencies and parallel-safety must be confirmed via `arc_ask_operator` before any leaf becomes `ready`. depends: [1.4, 3.3].
 
-### Phase 9 — Release-ready handoff
+### Phase 9 — Release-ready handoff (9.0 pending)
 
-- **9.1 Archival** — sessions + journal archived; YAML final checkpoints; ask keep/delete. depends: [7.1, 7.2, 7.3].
-- **9.2 Package publish readiness** — installable as a Pi package; no remote push/deploy automation. depends: [9.1].
-- **9.3 Operator and user docs** — owns README expansion only after product exists, plus install-in-isolated-ARC-Pi-profile docs, `/arc-workflow` command reference, score/status interpretation, and Pi-parent vs ARC-worker-route boundaries. depends: [9.2].
+- [ ] **9.1 Archival** — sessions + journal archived; YAML final checkpoints; ask keep/delete. depends: [7.1, 7.2, 7.3].
+- [ ] **9.2 Package publish readiness** — installable as a Pi package; no remote push/deploy automation. depends: [9.1].
+- [ ] **9.3 Operator and user docs** — owns README expansion only after product exists, plus install-in-isolated-ARC-Pi-profile docs, `/arc-workflow` command reference, score/status interpretation, and Pi-parent vs ARC-worker-route boundaries. depends: [9.2].
 
 ## 8. Acceptance criteria for v1
 

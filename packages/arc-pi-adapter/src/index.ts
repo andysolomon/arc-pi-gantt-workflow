@@ -1,5 +1,32 @@
 export const PACKAGE_NAME = "@arc/pi-workflow";
 
+export { consumeLiveWorkflowEdit } from "./live-edit.ts";
+export type {
+  RevalidateWorkflowEditOptions,
+  WorkflowEditDiagnostic,
+  WorkflowEditImpact,
+  WorkflowEditResult,
+} from "@arc/workflow-core";
+
+export {
+  createModelProposalImporter,
+  importModelProposal,
+  MODEL_PROPOSAL_CONFIRM_LABEL,
+  MODEL_PROPOSAL_REJECT_LABEL,
+} from "./import/index.ts";
+export type {
+  ImportModelProposalOptions,
+  ModelProposalConfirmation,
+  ModelProposalConfirmationKind,
+  ModelProposalConfirmationStatus,
+  ModelProposalImporter,
+  ModelProposalImportFailure,
+  ModelProposalImportFailureStage,
+  ModelProposalImportResult,
+  ModelProposalImportSuccess,
+  ModelProposalLeafDecision,
+} from "./import/index.ts";
+
 export {
   CHILD_PROFILES,
   CHILD_PROFILE_IDS,
