@@ -1,6 +1,6 @@
 # ARC Pi Gantt Workflow — Implementation Plan
 
-**Status:** Phase 2.3 verified (scheduler). Phase 2 remains in progress.
+**Status:** Phase 6 (parallel Gantt execution) verified locally. Phase 7 is pending. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
 **Source artifact:** `docs/gantt-workflow/plan.md` (Plan worker, 2026-09-03). This file is the human-facing promotion of that artifact, with truncated/redacted lines restored from the Decision Ledger and parent-confirmed sibling seams.
 **Task slug:** `gantt-workflow`
 **Planning mode:** Hybrid greenfield + integration gap
@@ -240,9 +240,9 @@ Every numbered item is an executable leaf. Groups do not launch sessions. Each l
 
 ### Phase 6 — Parallel Gantt execution
 
-- **6.1 Parallel scheduler activation** — default concurrency 4, per-item supervision. depends: [5.3].
-- **6.2 Question queue under parallelism** — hybrid priority verified with ≥2 concurrent waiting items. depends: [6.1, 3.3].
-- **6.3 Dashboard + passive widget** — owns `adapter/src/ui`; TUI and RPC. depends: [6.1].
+- **6.1 Parallel scheduler activation** — default concurrency 4, per-item supervision, dependency-aware waves, single-flight protection, and serialized integration/completion boundaries. Acceptance: a 4-leaf fixture reaches the expected terminal states without duplicate completion targeting. depends: [5.3].
+- **6.2 Question queue under parallelism** — hybrid priority verified with ≥2 concurrent waiting items. Acceptance: one shared bounded queue serializes `arc_ask_operator`, prioritizes UI pick → mandatory gate → critical path → FIFO, preserves item/question provenance, and enforces total/per-item bounds. depends: [6.1, 3.3].
+- **6.3 Dashboard + passive widget** — owns `adapter/src/ui`; TUI and RPC. Acceptance: deterministic checkpoint/runtime/question snapshots render through TUI and a passive widget, while bounded JSON-safe RPC exposes status, widget, and question selection without a second prompt path. depends: [6.1].
 
 ### Phase 7 — Recovery, restart, cancel
 

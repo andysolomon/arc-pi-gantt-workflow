@@ -16,6 +16,14 @@
     "./run-sequential": {
       "types": "./src/run-sequential.ts",
       "import": "./src/run-sequential.ts"
+    },
+    "./run-parallel": {
+      "types": "./src/run-parallel.ts",
+      "import": "./src/run-parallel.ts"
+    },
+    "./ui": {
+      "types": "./src/ui/index.ts",
+      "import": "./src/ui/index.ts"
     }
   },
   "scripts": {

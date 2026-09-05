@@ -275,6 +275,8 @@ export const noRiskReview: RiskReviewPort = Object.freeze({
 // ---------------------------------------------------------------------------
 
 export interface ExecuteCompletionOptions {
+  /** Explicit leaf identity for parallel callers; legacy callers may omit it. */
+  readonly itemId?: string;
   readonly paths: WorkflowPaths;
   readonly renderContext: {
     readonly generated_at: string;
@@ -328,9 +330,11 @@ export async function executeCompletion(
   const transitioned: CompleteLeafCheckpointResult = completeLeafCheckpoint(
     workflow,
     {
-      itemId: integrateResult.commit?.hash === undefined
-        ? workflow.items.find((item): item is Leaf => item.kind === "leaf")?.id ?? ""
-        : findLeafIdForCompletion(workflow, integrateResult),
+      itemId: options.itemId ?? (
+        integrateResult.commit?.hash === undefined
+          ? workflow.items.find((item): item is Leaf => item.kind === "leaf")?.id ?? ""
+          : findLeafIdForCompletion(workflow, integrateResult)
+      ),
       nextState: CheckpointState.completed,
       updatedAt,
     },

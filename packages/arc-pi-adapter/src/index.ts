@@ -28,6 +28,10 @@ export {
   EVENT_ENVELOPE_VERSION,
   isMandatoryBrokerGate,
   MANDATORY_BROKER_GATES,
+  createQuestionQueue,
+  DEFAULT_MAX_QUEUED_QUESTIONS,
+  MAX_QUEUED_QUESTIONS,
+  DEFAULT_MAX_PENDING_QUESTIONS_PER_ITEM,
 } from "./questions/index.ts";
 export type {
   AskOperatorFn,
@@ -45,6 +49,10 @@ export type {
   QuestionBrokerConfig,
   QuestionBrokerOptions,
   QuestionEventEnvelope,
+  QuestionQueue,
+  QuestionQueueEntry,
+  QuestionQueueEntryStatus,
+  QuestionQueueOptions,
 } from "./questions/index.ts";
 
 export {
@@ -97,3 +105,44 @@ export type {
   RiskReviewPort,
   WorkflowPaths,
 } from "./complete/index.ts";
+
+export {
+  createParallelRunner,
+  DEFAULT_PARALLEL_RUNNER_CONCURRENCY,
+} from "./run-parallel.ts";
+export type {
+  ParallelRunner,
+  ParallelRunnerLeafOutcome,
+  ParallelRunnerLeafStatus,
+  ParallelRunnerOptions,
+  ParallelRunnerOutcome,
+  ParallelRunnerPaths,
+  ParallelWorker,
+} from "./run-parallel.ts";
+
+export {
+  CHECKPOINT_KEYS,
+  checkpointCounts,
+  createWorkflowDashboard,
+  createWorkflowRpc,
+  handleWorkflowRpc,
+  MAX_WORKFLOW_RPC_REQUEST_BYTES,
+  MAX_WORKFLOW_RPC_RESPONSE_BYTES,
+  renderDashboardTui,
+  renderPassiveWidget,
+} from "./ui/index.ts";
+export type {
+  DashboardCounts,
+  DashboardItem,
+  DashboardRuntimeState,
+  DashboardSnapshot,
+  QuestionQueueLike,
+  WorkflowDashboard,
+  WorkflowDashboardOptions,
+  WorkflowRpcFailure,
+  WorkflowRpcHandler,
+  WorkflowRpcRequest,
+  WorkflowRpcResponse,
+  WorkflowRpcSuccess,
+  WorkflowSource,
+} from "./ui/index.ts";
