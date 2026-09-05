@@ -296,3 +296,32 @@
 - Next actions:
   - Phase 7 recovery/restart/cancel
   - Phase 9 release-ready handoff
+
+## Evidence
+
+- Status: completed
+- Summary: Implemented Phase 7 recovery diagnosis, restart reconciliation, and ordered cancellation with broker-only asks, checkpoint application, retain-only session archival, exports, tests, and progress/Gantt updates. No commit was created per the explicit prohibition.
+- Changes:
+  - Added packages/workflow-core/src/recovery/{types,diagnose,index}.ts with pure deterministic findings and approval-bound proposed actions.
+  - Updated packages/workflow-core/src/index.ts and added packages/workflow-core/test/recovery.test.ts.
+  - Added packages/arc-pi-adapter/src/recovery/{restart,cancel,index}.ts with broker-routed reconciliation and stop-intent-first cancellation.
+  - Updated packages/arc-pi-adapter/src/index.ts with Phase 7 factories and public types.
+  - Added packages/arc-pi-adapter/test/recovery-restart.test.ts and recovery-cancel.test.ts.
+  - Updated docs/progress.txt: 7.0–7.3 marked complete and ASCII Gantt extended with the Phase 7 group.
+- Verification:
+  - Focused Phase 7 tests: 7 passed, 0 failed across 3 suites.
+  - workflow-core suite: 162 passed, 0 failed.
+  - arc-pi-adapter unit suite: 117 passed, 0 failed.
+  - npm test: core passed; adapter 117/118, with unchanged M1 live test blocked by sandbox `spawnSync git EPERM`.
+  - npm run typecheck: clean.
+  - Focused ESLint over every changed TS file: clean; git diff --check: clean.
+  - npm run lint reaches one pre-existing error in unchanged src/orchestrator/live-activity.ts:81 (`no-useless-assignment`).
+  - Confirmed docs show [x] 7.1/7.2/7.3; prohibited docs and Phase 0–6 implementations remain untouched.
+- Risks:
+  - Full npm test cannot be fully green in this sandbox because Node child-process git execution is denied for the unchanged M1 integration test.
+  - Full lint remains red from an existing error outside authorized additive scope.
+  - HEAD remains the Phase 6 commit because committing was explicitly prohibited; requested Phase 7 subject is not yet recorded.
+- Next actions:
+  - Run npm test in an environment permitting the M1 test to spawn git.
+  - Resolve or waive the pre-existing live-activity.ts lint error outside this bounded task.
+  - After review, commit with: feat(workflow-core,pi-adapter): Phase 7 recovery, restart, cancel

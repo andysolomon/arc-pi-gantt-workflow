@@ -89,6 +89,31 @@ export type {
 export type { EventEnvelope } from "./questions/index.ts";
 
 export {
+  createCancelController,
+  createCancellationController,
+  createRestartReconciler,
+  createRestartRecovery,
+  findRestartDiscrepancies,
+} from "./recovery/index.ts";
+export type {
+  CancellationController,
+  CancellationSessionPort,
+  CancellationWorktreePort,
+  CancelOptions,
+  CancelResult,
+  RestartCheckpointPort,
+  RestartDiscrepancy,
+  RestartDiscrepancyKind,
+  RestartFailure,
+  RestartJournalCheckpoint,
+  RestartOptions,
+  RestartReconciler,
+  RestartResolution,
+  RestartResult,
+  RestartWorktree,
+} from "./recovery/index.ts";
+
+export {
   createFsAtomicWorkflowWriter,
   executeCompletion,
   noRiskReview,
