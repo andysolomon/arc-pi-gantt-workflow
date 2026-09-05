@@ -39,3 +39,86 @@
 - Next actions:
   - Operator decides whether to merge #11 now or wait for review
   - [absolute path redacted]
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.3 Verify passes locally on feat/wf-4-3-conflict-policy at eadbe11. workflow-core 137/137, arc-pi-adapter 83/83; typecheck exit 0; lint 0 new errors; diff --check clean. 5 files, 780 insertions, 40 deletions. Sandbox recovery: parent moved the diff from worker read-only .git sandbox onto the branch and committed with conventional feat message.
+- Changes:
+  - Created feat/wf-4-3-conflict-policy off origin/main (parent-side sandbox recovery).
+  - Committed the 5 owned files as eadbe11 with conventional feat(workflow-core,pi-adapter) message.
+  - docs/gantt-workflow/{analyze,implement}.md left unstaged for the docs follow-up commit.
+- Verification:
+  - workflow-core 137/137; arc-pi-adapter 83/83.
+  - npm run typecheck exit 0.
+  - npm run lint: 0 new errors; only the 2 pre-existing shipped-file errors.
+  - git diff --check clean.
+  - 5 files in commit, all in scope; no shipped module touched.
+  - MAX_AUTO_RESOLVE_ATTEMPTS=2 matches IMPLEMENTATION_PLAN §9.
+  - Cherry-pick happy path byte-stable.
+- Risks:
+  - docs/gantt-workflow/implement.md auto-recorded by worker; should ride the docs follow-up commit.
+  - Implementation model gpt-5.6-sol differs from parent minimax-m3 but policy recommends an explicit check route with a different model for separate Code Review.
+- Next actions:
+  - Ask operator whether to run a separate Code Review with a different model.
+  - Ask operator whether to push the branch and open a PR (requires explicit authorization).
+  - After PR merge, commit docs follow-up (analyze.md, implement.md, verify.md, progress.txt leaf flip).
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.3 parent-local Code Review passes. Independent of the implementation model (gpt-5.6-sol). Verdict: clean — all 10 contract checks green; ready for operator PR authorization.
+- Changes:
+  - Performed parent-local manual review of commit eadbe11 on feat/wf-4-3-conflict-policy (parent model minimax-m3 vs implementation model gpt-5.6-sol).
+  - No code mutations; review-only.
+- Verification (10 checks):
+  - 1. Purity: workflow-core/src/integrate/{integrate,types}.ts only import from ./types.ts and ../events/index.ts (workflow-core self). No node:fs, node:child_process, ARC Pi, arc-orchestrator, model package imports.
+  - 2. Mandatory gate fail-closed: integrator always calls asker.ask(envelope) with gate="integration"; approved = (answerLabel === AFFIRMATIVE_INTEGRATION_LABEL); broker failure → phase="ask", ok=false; non-affirmative → phase="ask", ok=true; no auto-approval code path.
+  - 3. Cherry-pick happy path byte-stable: when cherryOutcome.ok=true, the early-return block emits ok=true, phase="cherry_pick", verify/commit/integration/cherryPicked — identical to 4.2. No autoResolve/reset/integrationVerify port call.
+  - 4. Defaults match IMPLEMENTATION_PLAN §9: DEFAULT_AUTO_RESOLVE_STRATEGY="theirs"; DEFAULT_MAX_AUTO_RESOLVE_ATTEMPTS=2; MAX_AUTO_RESOLVE_ATTEMPTS=2 (hard cap). Constructor rejects negative / non-integer / > MAX and unknown strategy strings.
+  - 5. Loop semantics: strategy="off" or maxAttempts=0 short-circuits to autoResolveFailure("auto_resolve_disabled") → phase="auto_resolve", needsReplan=true, reset still called; exhausted attempts → autoResolveFailure("auto_resolve_exhausted"); successful resolution runs integrationVerify against options.repositoryRoot (NOT worktreePath); verify failure triggers reset and surfaces phase="verify_integration" with needsReplan=true; reset failure overrides and surfaces failure.reason="reset_failed" with stderr.
+  - 6. File scope: exactly the 5 listed files; no other module in either package touched.
+  - 7. New tests cover all contract scenarios: workflow-core tests include "Phase 4.2 conflict now fails closed in auto_resolve with needsReplan", "resolved conflict passes full checks in the integration checkout", "exhausted retries reset and request replanning", "failed integration checks reset the cherry-pick and preserve conflict evidence", "strategy off disables resolution and still resets", "zero maxAttempts disables resolution", "records ${strategy} strategy on the resolution port", "reset failure overrides checks failure and reports stderr", "rejects invalid auto-resolve strategies", "rejects invalid maxAttempts". Adapter tests include "runs checkout --${strategy} and git add for conflicted files", "runs git rerere and git add for rerere strategy", "locks reset to HEAD~1 in the repository root", "threads auto-resolve settings and verifies the integration checkout", and the existing 4.2 happy path test stays byte-stable.
+  - 8. Optional port discipline: options.git.integrationVerify, options.git.autoResolve, options.git.reset are optional; absence fails closed (integrationVerify missing → ok:false integration verify with synthetic exit_code:-1; autoResolve missing → break loop → autoResolveFailure("auto_resolve_exhausted"); reset missing → returns ok:false from resetIntegration → all paths surface failure.reason="reset_failed").
+  - 9. AFFIRMATIVE_INTEGRATION_LABEL="cherry-pick" / NEGATIVE_INTEGRATION_LABEL="skip" semantics unchanged; same usage at lines 94, 98, 265.
+  - 10. The 4.2 cherry-pick conflict test was correctly updated (renamed "Phase 4.2 conflict now fails closed in auto_resolve with needsReplan", now asserts phase="auto_resolve", needsReplan=true, failure.reason="auto_resolve_exhausted", conflictedFiles surfaced). It was not silently deleted.
+- Risks:
+  - ARC runner Code Review delegation failed twice (automatic + opus-check) due to a runner-level model-registry/policy divergence on kimi bindings in arc-orchestrator. This is infra, not workflow code. Future ARC reviews may be blocked until the runner registry is synced.
+  - Sandbox recovery pattern (parent creates branch and commits) is a workaround for the worker's read-only .git sandbox. The worker contract required branch creation; we satisfied it parent-locally with a conventional commit message.
+- Next actions:
+  - Operator authorizes push of feat/wf-4-3-conflict-policy and PR creation (or holds).
+  - After PR merge, parent commits docs follow-up (analyze.md, implement.md, verify.md, progress.txt leaf flip).
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.3 parent-local Code Review passes. Independent of implementation model (parent minimax-m3 vs gpt-5.6-sol). Verdict: clean — all 10 contract checks green. Ready for operator PR authorization. ARC Code Review delegation was blocked by a runner-level kimi model-registry divergence.
+- Changes:
+  - Performed parent-local manual review of eadbe11 on feat/wf-4-3-conflict-policy.
+  - Appended 10-check verdict to docs/gantt-workflow/verify.md.
+- Verification:
+  - Checks 1-5: purity, mandatory gate fail-closed, byte-stable happy path, defaults match §9, loop semantics with reset + integrationVerify on repositoryRoot.
+  - Checks 6-10: file scope, tests cover all 12 scenarios, optional ports fail closed, label semantics unchanged, 4.2 cherry-pick conflict test updated (not deleted).
+- Risks:
+  - ARC runner model-registry divergence on kimi bindings blocks all ARC Code Review routes. Parent-local review used as fallback per policy.
+  - Sandbox recovery (parent creates branch + commit) is a workaround for worker read-only .git.
+- Next actions:
+  - Operator authorizes push of feat/wf-4-3-conflict-policy and PR creation (or holds).
+  - After PR merge, parent commits docs follow-up (analyze.md, implement.md, verify.md, progress.txt leaf flip).
+
+## Evidence
+
+- Status: completed
+- Summary: PR #13 squash-merged into main as 0499249 on 2026-09-05 03:31:24 UTC. Docs follow-up commit 10dd1e4 ("docs(progress): mark 4.3 shipped (#13)") pushed to origin/main: analyze.md, implement.md, verify.md updated with parent-local evidence; progress.txt leaf 4.3 flipped to [x], Status header updated to 4.1/4.2/4.3 shipped (4.4 pending).
+- Changes:
+  - gh pr merge 13 --squash: MERGED. mergeCommit oid 049924957d4b66d82e4a85fc42e43368b4f29220.
+  - docs commit 10dd1e4 on main: 4 files changed, 154 insertions, 2 deletions.
+  - Branch feat/wf-4-3-conflict-policy deleted from origin (gh --delete-branch).
+- Verification:
+  - git log --oneline: 10dd1e4 docs(progress): mark 4.3 shipped (#13) / 0499249 feat(workflow-core,pi-adapter): Phase 4.3 ... (#13) / e45a4d6 docs(progress): mark 4.2 shipped (#11)
+  - Local main matches remote main (ahead=0; clean working tree except pre-existing untracked workspace noise).
+  - progress.txt line 5: "4.1, 4.2, 4.3 shipped; 4.4 pending". line 37: "[x] 4.3 - Automatic conflict resolution then full workflow checks (#13)". line 38: "[ ] 4.4 - Completion + atomic progress update + optional risk-based review".
+- Risks:
+  - None outstanding for Phase 4.3. 4.4 is the next leaf; ARC runner model-registry divergence on kimi bindings still blocks ARC-delegated Code Review; parent-local review fallback remains the workaround for 4.4 unless the registry is synced.
+- Next actions:
+  - Phase 4.4 contract drafting is unblocked. Awaiting operator direction.

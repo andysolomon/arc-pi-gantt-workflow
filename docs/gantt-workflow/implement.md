@@ -189,3 +189,67 @@
 - Risks:
   - Lint errors in shipped live-activity.ts and broker.ts pre-exist (PR #9, #10); not introduced by 4.2
   - Cherry-pick port uses git --no-commit then commit; if a pre-commit hook fails the follow-up commit surfaces as cherry-pick failure
+
+## Evidence
+
+- Status: completed
+- Summary: Implemented Phase 4.3 conflict resolution, bounded retries, integration verification, rollback, and needsReplan reporting. All 220 tests and typecheck pass; scoped lint and diff checks are clean.
+- Changes:
+  - packages/workflow-core/src/integrate/integrate.ts: added conflict retries, full integration checks, reset handling, defaults, and validation.
+  - packages/workflow-core/src/integrate/types.ts: added strategies, options, ports, phases, failure shapes, and result evidence.
+  - packages/workflow-core/test/integrate.test.ts: added Phase 4.3 coverage and preserved Phase 4.2 regressions.
+  - packages/arc-pi-adapter/src/integrate/index.ts: added process auto-resolve/reset ports, conflict discovery, and adapter wiring.
+  - packages/arc-pi-adapter/test/integrate.test.ts: covered command sequences, conflict files, configuration threading, and integration-check checkout.
+- Verification:
+  - npm test -w @arc/workflow-core: 137 passed, 0 failed.
+  - npm test -w @arc/pi-workflow: 83 passed, 0 failed.
+  - npm test: 220 passed, 0 failed.
+  - npm run typecheck: exit 0.
+  - Scoped ESLint on all five Phase 4.3 files: 0 errors.
+  - npm run lint: only 2 permitted pre-existing errors in live-activity.ts and broker.ts.
+  - git diff --check: clean.
+  - Forbidden workflow-core integrate imports audit: clean.
+- Risks:
+  - Sandbox exposes .git read-only, so feat/wf-4-3-conflict-policy could not be created; changes remain uncommitted in the existing main worktree.
+  - Unrelated pre-existing workspace changes in docs/gantt-workflow/analyze.md, .agents/, .claude/, and skills-lock.json were preserved.
+- Next actions:
+  - Parent should inspect the five-file diff and move it onto feat/wf-4-3-conflict-policy before Verify/PR handling.
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.3 shipped via PR #13 on feat/wf-4-3-conflict-policy (commit eadbe11). Push and PR open were authorized by the operator on the Decision Ledger (record 5ba0999e-b70e-4040-8c4a-4188d748696e).
+- Changes:
+  - feat/wf-4-3-conflict-policy @ eadbe11: 5 files, 780 insertions / 40 deletions.
+  - Branch pushed to origin; PR #13 opened at https://github.com/andysolomon/arc-pi-gantt-workflow/pull/13.
+  - File ownership matches contract: packages/workflow-core/src/integrate/{integrate,types}.ts + matching tests and packages/arc-pi-adapter/src/integrate/index.ts + matching tests only.
+- Verification:
+  - Local pre-PR: workflow-core 137/137; arc-pi-adapter 83/83; typecheck exit 0; lint 0 new errors; diff --check clean.
+  - Parent-local Code Review: 10/10 checks green (purity, mandatory-gate fail-closed, byte-stable 4.2 happy path, defaults match §9, loop semantics, file scope, test coverage, optional ports, label semantics, 4.2 cherry-pick conflict test update).
+  - gh pr view 13: 5 files changed (778 additions, 38 deletions on the PR page; matches commit stat 780/40 minus the 2/-2 line-count difference in PR aggregation).
+  - State: OPEN; ready for merge or follow-up review.
+- Risks:
+  - ARC Code Review delegation was blocked by a runner-level model-registry divergence on kimi bindings. Future ARC reviews will be blocked until the registry is synced in arc-orchestrator.
+  - Sandbox recovery (parent creates branch + commit) is a workaround for the worker's read-only .git sandbox. Documented in PR #13 body.
+- Next actions:
+  - Operator decides whether to merge #13 now or wait for follow-up review.
+  - After merge, parent commits docs follow-up: analyze.md, implement.md, verify.md (already appended), and progress.txt leaf flip for 4.3.
+
+## Evidence
+
+- Status: completed
+- Summary: [absolute path redacted]
+- Changes:
+  - Pushed feat/wf-4-3-conflict-policy to origin.
+  - Opened PR #13 with conventional feat(workflow-core,pi-adapter) title and full contract summary in body.
+  - Appended PR summary to docs/gantt-workflow/implement.md.
+- Verification:
+  - PR #13 state: OPEN; headRefName=feat/wf-4-3-conflict-policy; baseRefName=main; 5 files changed.
+  - Local verification (pre-push) clean.
+  - Parent-local review 10/10.
+- Risks:
+  - ARC Code Review blocked by runner model-registry divergence.
+  - Sandbox recovery pattern (parent creates branch + commit) used to satisfy contract.
+- Next actions:
+  - Operator decides on merge or follow-up review.
+  - After merge: commit docs follow-up (analyze.md, implement.md, verify.md, progress.txt leaf flip).

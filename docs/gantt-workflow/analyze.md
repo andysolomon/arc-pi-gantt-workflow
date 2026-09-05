@@ -42,3 +42,25 @@
   - Show operator exact Implement contract + workload_class=medium-heavy
   - After approval create worktree feat/wf-4-2-verify-commit-cherry-pick off origin/main
   - Delegate Implement via arc_delegate
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 4.3 analyze: automatic conflict resolution then full workflow checks. Contract drafted for workflow-core/src/integrate + adapter integrate. New ports (GitAutoResolvePort, GitResetPort), new phases (auto_resolve, verify_integration), needsReplan/reverted booleans. Operator approval recorded on Decision Ledger (942df2a0). Branch feat/wf-4-3-conflict-policy.
+- Changes:
+  - Drafted exact contract: outcome, scope (file ownership), preserved_behavior, verification (10 scenarios), prohibitions, workload_class=medium-heavy.
+  - Drafted new types: IntegrationAutoResolveStrategy, IntegrationAutoResolveOptions, GitAutoResolvePort, GitResetPort, extended IntegrateResult.
+  - Drafted new IntegratePhase values (auto_resolve, verify_integration) and new failure shapes (auto_resolve exhaustion, verify_integration checks_failed, reset_failed).
+  - Recorded operator approval on Decision Ledger (942df2a0-0a6f-40b0-ab4b-c21ad4e72a18).
+- Verification:
+  - File ownership disjoint from any in-flight worktree.
+  - 4.2 happy path test (no conflict) byte-stable.
+  - Existing 4.2 cherry-pick conflict test updated to phase="auto_resolve", needsReplan=true.
+  - Default settings (theirs, maxAttempts=2) match IMPLEMENTATION_PLAN §9.
+- Risks:
+  - Changing 4.2 cherry-pick conflict test is a deliberate contract change; downstream assertions must update in the same PR.
+  - Auto-resolve (theirs/ours) silently overwrites operator-reviewed semantics; bounded by attempts and surfaced via needsReplan on failure.
+  - git reset --hard HEAD~1 destroys the integration commit; quarantine vs revert is a separate decision.
+- Next actions:
+  - Delegate Implement via arc_delegate, phase=implement, implement_authorized=true, workload_class=medium-heavy, task_slug=gantt-workflow.
+  - Run Verify on completed Implement; surface PR; operator decides on merge.
