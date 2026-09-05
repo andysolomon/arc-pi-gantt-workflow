@@ -1,5 +1,6 @@
 /**
- * Phase 4.2 types: verify → local commit → ask → cherry-pick.
+ * Phase 4.3 types: verify → local commit → ask → cherry-pick, with
+ * bounded conflict resolution and integration-branch verification.
  *
  * The integrate module is pure: every external operation (running tests,
  * making a commit, cherry-picking into the integration branch, and asking the
@@ -65,7 +66,34 @@ export interface GitCherryPickPort {
     readonly integrationBranch: string;
     readonly repositoryRoot: string;
     readonly worktreePath: string;
+  }): Promise<{
+    readonly ok: boolean;
+    readonly result: GitExecResult;
+    readonly conflictedFiles?: readonly string[];
+  }>;
+}
+
+export type IntegrationAutoResolveStrategy = "theirs" | "ours" | "rerere" | "off";
+
+export interface IntegrationAutoResolveOptions {
+  /** Conflict strategy. Defaults to `theirs`. */
+  readonly strategy?: IntegrationAutoResolveStrategy;
+  /** Number of resolution/retry cycles. Defaults to 2; zero disables resolution. */
+  readonly maxAttempts?: number;
+}
+
+export interface GitAutoResolvePort {
+  autoResolve(opts: {
+    readonly repositoryRoot: string;
+    readonly strategy: Exclude<IntegrationAutoResolveStrategy, "off">;
+    readonly conflictedFiles: readonly string[];
+    readonly attempt: number;
   }): Promise<{ readonly ok: boolean; readonly result: GitExecResult }>;
+}
+
+export interface GitResetPort {
+  /** Revert the current integration commit. Production adapters lock this to HEAD~1. */
+  reset(repositoryRoot: string): Promise<{ readonly ok: boolean; readonly result: GitExecResult }>;
 }
 
 /**
@@ -92,6 +120,8 @@ export interface IntegrateIntegrationOptions {
    * commit in the worktree, mark the leaf blocked from integration).
    */
   readonly skipDescription: string;
+  /** Automatic conflict handling after an approved cherry-pick. */
+  readonly auto_resolve?: IntegrationAutoResolveOptions;
 }
 
 export interface IntegrateOptions {
@@ -104,8 +134,11 @@ export interface IntegrateOptions {
   readonly commitSubject: string;
   readonly git: {
     readonly verify: GitVerifyPort;
+    readonly integrationVerify?: GitVerifyPort;
     readonly commit: GitCommitPort;
     readonly cherryPick: GitCherryPickPort;
+    readonly autoResolve?: GitAutoResolvePort;
+    readonly reset?: GitResetPort;
   };
   readonly asker: IntegrateAskerPort;
   readonly integration?: IntegrateIntegrationOptions;
@@ -113,7 +146,13 @@ export interface IntegrateOptions {
   readonly createQuestionId?: () => string;
 }
 
-export type IntegratePhase = "verify" | "commit" | "ask" | "cherry_pick";
+export type IntegratePhase =
+  | "verify"
+  | "commit"
+  | "ask"
+  | "cherry_pick"
+  | "auto_resolve"
+  | "verify_integration";
 
 export interface IntegrateIntegrationResolution {
   readonly envelopeId: string;
@@ -133,7 +172,30 @@ export type IntegrateFailure =
       readonly brokerMessage?: string;
       readonly envelopeId?: string;
     }
-  | { readonly phase: "cherry_pick"; readonly reason: string; readonly stderr?: string };
+  | { readonly phase: "cherry_pick"; readonly reason: string; readonly stderr?: string }
+  | {
+      readonly phase: "auto_resolve";
+      readonly reason: "auto_resolve_disabled" | "auto_resolve_exhausted" | "reset_failed";
+      readonly stderr?: string;
+    }
+  | {
+      readonly phase: "verify_integration";
+      readonly reason: "checks_failed" | "reset_failed";
+      readonly stderr?: string;
+    };
+
+export interface IntegrateConflict {
+  readonly conflictedFiles: readonly string[];
+  readonly strategy: IntegrationAutoResolveStrategy;
+  readonly attempts: number;
+  readonly maxAttempts: number;
+}
+
+export interface IntegrateIntegrationVerified {
+  readonly ok: boolean;
+  readonly exit_code: number;
+  readonly reverted: boolean;
+}
 
 export interface IntegrateResult {
   readonly ok: boolean;
@@ -142,6 +204,10 @@ export interface IntegrateResult {
   readonly commit?: { readonly hash: string };
   readonly integration?: IntegrateIntegrationResolution;
   readonly cherryPicked?: { readonly branch: string; readonly commitRef: string };
+  readonly conflict?: IntegrateConflict;
+  readonly integrationVerified?: IntegrateIntegrationVerified;
+  readonly needsReplan?: boolean;
+  readonly reverted?: boolean;
   readonly failure?: IntegrateFailure;
 }
 

@@ -3,8 +3,10 @@ import { describe, test } from "node:test";
 import {
   createIntegratorAdapter,
   makeBrokerAsker,
+  makeProcessAutoResolvePort,
   makeProcessCherryPickPort,
   makeProcessCommitPort,
+  makeProcessResetPort,
   makeProcessVerifyPort,
   type GitExecResult,
   type ProcessInvoker,
@@ -178,6 +180,10 @@ describe("makeProcessCherryPickPort", () => {
           "git -C /repo cherry-pick --no-commit feedface",
           { exit_code: 1, stdout: "", stderr: "CONFLICT" },
         ],
+        [
+          "git -C /repo diff --name-only --diff-filter=U",
+          { exit_code: 0, stdout: "src/a.ts\nsrc/b.ts\n", stderr: "" },
+        ],
       ]),
     );
     const port = makeProcessCherryPickPort(invoker);
@@ -190,6 +196,11 @@ describe("makeProcessCherryPickPort", () => {
     assert.equal(result.ok, false);
     assert.equal(result.result.exit_code, 1);
     assert.equal(result.result.stderr, "CONFLICT");
+    assert.deepEqual(result.conflictedFiles, ["src/a.ts", "src/b.ts"]);
+    assert.deepEqual(invoker.calls.map((call) => `${call.program} ${call.args.join(" ")}`), [
+      "git -C /repo cherry-pick --no-commit feedface",
+      "git -C /repo diff --name-only --diff-filter=U",
+    ]);
   });
 
   test("ok=false when cherry-pick applies but follow-up commit fails", async () => {
@@ -212,6 +223,80 @@ describe("makeProcessCherryPickPort", () => {
     assert.equal(result.ok, false);
     assert.equal(result.result.exit_code, 1);
     assert.equal(result.result.stderr, "hook denied");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeProcessAutoResolvePort / makeProcessResetPort
+// ---------------------------------------------------------------------------
+
+describe("makeProcessAutoResolvePort", () => {
+  for (const strategy of ["theirs", "ours"] as const) {
+    test(`runs checkout --${strategy} and git add for conflicted files`, async () => {
+      const invoker = makeFakeInvoker(
+        new Map<string, GitExecResult>([
+          [
+            `git -C /repo checkout --${strategy} -- src/a.ts src/b.ts`,
+            { exit_code: 0, stdout: "", stderr: "" },
+          ],
+          [
+            "git -C /repo add -- src/a.ts src/b.ts",
+            { exit_code: 0, stdout: "", stderr: "" },
+          ],
+        ]),
+      );
+      const result = await makeProcessAutoResolvePort(invoker).autoResolve({
+        repositoryRoot: "/repo",
+        strategy,
+        conflictedFiles: ["src/a.ts", "src/b.ts"],
+        attempt: 1,
+      });
+      assert.equal(result.ok, true);
+      assert.deepEqual(invoker.calls.map((call) => `${call.program} ${call.args.join(" ")}`), [
+        `git -C /repo checkout --${strategy} -- src/a.ts src/b.ts`,
+        "git -C /repo add -- src/a.ts src/b.ts",
+      ]);
+    });
+  }
+
+  test("runs git rerere and git add for rerere strategy", async () => {
+    const invoker = makeFakeInvoker(
+      new Map<string, GitExecResult>([
+        ["git -C /repo rerere", { exit_code: 0, stdout: "", stderr: "" }],
+        ["git -C /repo add -- src/a.ts", { exit_code: 0, stdout: "", stderr: "" }],
+      ]),
+    );
+    const result = await makeProcessAutoResolvePort(invoker).autoResolve({
+      repositoryRoot: "/repo",
+      strategy: "rerere",
+      conflictedFiles: ["src/a.ts"],
+      attempt: 1,
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(invoker.calls.map((call) => `${call.program} ${call.args.join(" ")}`), [
+      "git -C /repo rerere",
+      "git -C /repo add -- src/a.ts",
+    ]);
+  });
+});
+
+describe("makeProcessResetPort", () => {
+  test("locks reset to HEAD~1 in the repository root", async () => {
+    const invoker = makeFakeInvoker(
+      new Map([
+        [
+          "git -C /repo reset --hard HEAD~1",
+          { exit_code: 0, stdout: "HEAD is now at abc", stderr: "" },
+        ],
+      ]),
+    );
+    const result = await makeProcessResetPort(invoker).reset("/repo");
+    assert.equal(result.ok, true);
+    assert.deepEqual(invoker.calls, [{
+      program: "git",
+      args: ["-C", "/repo", "reset", "--hard", "HEAD~1"],
+      cwd: "/repo",
+    }]);
   });
 });
 
@@ -302,6 +387,75 @@ describe("createIntegratorAdapter", () => {
     assert.equal(result.cherryPicked!.commitRef, "abc123");
     assert.equal(journal.records.length, 1);
     assert.equal(journal.records[0]!.kind, "question-answer");
+  });
+
+  test("threads auto-resolve settings and verifies the integration checkout", async () => {
+    const calls: Array<{ program: string; args: readonly string[]; cwd: string }> = [];
+    let cherryAttempts = 0;
+    const invoker: ProcessInvoker = {
+      run(program, args, options) {
+        calls.push({ program, args, cwd: options.cwd });
+        const command = `${program} ${args.join(" ")}`;
+        if (command === "npm test") {
+          return { exit_code: 0, stdout: "ok", stderr: "" };
+        }
+        if (command === "git add --all") {
+          return { exit_code: 0, stdout: "", stderr: "" };
+        }
+        if (command === "git commit --no-verify -m feat(wf): integrate 4.3") {
+          return { exit_code: 0, stdout: "", stderr: "" };
+        }
+        if (command === "git rev-parse HEAD") {
+          return { exit_code: 0, stdout: "abc123\n", stderr: "" };
+        }
+        if (command === "git -C /repo cherry-pick --no-commit abc123") {
+          cherryAttempts += 1;
+          return cherryAttempts === 1
+            ? { exit_code: 1, stdout: "", stderr: "CONFLICT" }
+            : { exit_code: 0, stdout: "", stderr: "" };
+        }
+        if (command === "git -C /repo diff --name-only --diff-filter=U") {
+          return { exit_code: 0, stdout: "src/a.ts\n", stderr: "" };
+        }
+        if (command === "git -C /repo checkout --ours -- src/a.ts") {
+          return { exit_code: 0, stdout: "", stderr: "" };
+        }
+        if (command === "git -C /repo add -- src/a.ts") {
+          return { exit_code: 0, stdout: "", stderr: "" };
+        }
+        if (command === "git -C /repo commit --no-verify -m Integrate abc123 into main") {
+          return { exit_code: 0, stdout: "", stderr: "" };
+        }
+        return { exit_code: 127, stdout: "", stderr: `unexpected command: ${command}` };
+      },
+    };
+    const { integrator, broker } = createIntegratorAdapter({
+      workflowSlug: "gantt-workflow",
+      itemId: "4.3",
+      sessionId: "session-1",
+      worktreePath: "/worktree",
+      repositoryRoot: "/repo",
+      integrationBranch: "main",
+      commitSubject: "feat(wf): integrate 4.3",
+      integration: {
+        question: "Cherry-pick?",
+        cherryPickDescription: "Integrate.",
+        skipDescription: "Skip.",
+        auto_resolve: { strategy: "ours", maxAttempts: 1 },
+      },
+      ask: makeAsker(makeAnswer({ answer: "cherry-pick" })),
+      journal: makeJournal(),
+      invoker,
+    });
+    const result = await integrator.run();
+    broker.close();
+    assert.equal(result.ok, true);
+    assert.equal(result.phase, "verify_integration");
+    assert.equal(result.conflict?.strategy, "ours");
+    assert.deepEqual(
+      calls.filter((call) => call.program === "npm").map((call) => call.cwd),
+      ["/worktree", "/repo"],
+    );
   });
 
   test("verify failure prevents ask and cherry-pick", async () => {

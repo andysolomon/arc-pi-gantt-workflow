@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   createIntegrator,
+  type GitAutoResolvePort,
   type GitCherryPickPort,
   type GitCommitPort,
+  type GitResetPort,
   type GitVerifyPort,
   type IntegrateAskerOutcome,
   type IntegrateAskerPort,
@@ -17,28 +19,56 @@ import { EVENT_ENVELOPE_VERSION, type QuestionEventEnvelope } from "@arc/workflo
 
 interface FakeGit {
   verify: GitVerifyPort & { readonly calls: string[] };
+  integrationVerify: GitVerifyPort & { readonly calls: string[] };
   commit: GitCommitPort & { readonly calls: Array<{ worktreePath: string; subject: string }> };
   cherryPick: GitCherryPickPort & {
     readonly calls: Array<{ commitRef: string; integrationBranch: string; repositoryRoot: string; worktreePath: string }>;
   };
+  autoResolve: GitAutoResolvePort & {
+    readonly calls: Array<{
+      repositoryRoot: string;
+      strategy: "theirs" | "ours" | "rerere";
+      conflictedFiles: readonly string[];
+      attempt: number;
+    }>;
+  };
+  reset: GitResetPort & { readonly calls: string[] };
 }
 
 function makeFakeGit(overrides?: {
   readonly verify?: (path: string) => Promise<{ ok: boolean; result: { exit_code: number; stdout: string; stderr: string } }>;
+  readonly integrationVerify?: (path: string) => Promise<{ ok: boolean; result: { exit_code: number; stdout: string; stderr: string } }>;
   readonly commit?: (path: string, subject: string) => Promise<{ hash: string }>;
   readonly cherryPick?: (opts: {
     commitRef: string;
     integrationBranch: string;
     repositoryRoot: string;
     worktreePath: string;
-  }) => Promise<{ ok: boolean; result: { exit_code: number; stdout: string; stderr: string } }>;
+  }) => Promise<{
+    ok: boolean;
+    result: { exit_code: number; stdout: string; stderr: string };
+    conflictedFiles?: readonly string[];
+  }>;
+  readonly autoResolve?: GitAutoResolvePort["autoResolve"];
+  readonly reset?: GitResetPort["reset"];
 }): FakeGit {
   const verifyCalls: string[] = [];
+  const integrationVerifyCalls: string[] = [];
   const commitCalls: Array<{ worktreePath: string; subject: string }> = [];
   const cherryCalls: Array<{ commitRef: string; integrationBranch: string; repositoryRoot: string; worktreePath: string }> = [];
+  const autoResolveCalls: Array<{
+    repositoryRoot: string;
+    strategy: "theirs" | "ours" | "rerere";
+    conflictedFiles: readonly string[];
+    attempt: number;
+  }> = [];
+  const resetCalls: string[] = [];
   const verifyImpl = overrides?.verify ?? (async () => ({ ok: true, result: { exit_code: 0, stdout: "", stderr: "" } }));
+  const integrationVerifyImpl = overrides?.integrationVerify ?? (async () => ({ ok: true, result: { exit_code: 0, stdout: "", stderr: "" } }));
   const commitImpl = overrides?.commit ?? (async (_path: string, _subject: string) => ({ hash: "deadbeef0001" }));
   const cherryImpl = overrides?.cherryPick ?? (async () => ({ ok: true, result: { exit_code: 0, stdout: "", stderr: "" } }));
+  const autoResolveImpl = overrides?.autoResolve ?? (async () => ({ ok: true, result: { exit_code: 0, stdout: "", stderr: "" } }));
+  const resetImpl = overrides?.reset ?? (async () => ({ ok: true, result: { exit_code: 0, stdout: "", stderr: "" } }));
   return {
     verify: {
       async verify(worktreePath) {
@@ -47,6 +77,15 @@ function makeFakeGit(overrides?: {
       },
       get calls() {
         return verifyCalls;
+      },
+    },
+    integrationVerify: {
+      async verify(repositoryRoot) {
+        integrationVerifyCalls.push(repositoryRoot);
+        return integrationVerifyImpl(repositoryRoot);
+      },
+      get calls() {
+        return integrationVerifyCalls;
       },
     },
     commit: {
@@ -65,6 +104,24 @@ function makeFakeGit(overrides?: {
       },
       get calls() {
         return cherryCalls;
+      },
+    },
+    autoResolve: {
+      async autoResolve(opts) {
+        autoResolveCalls.push(opts);
+        return autoResolveImpl(opts);
+      },
+      get calls() {
+        return autoResolveCalls;
+      },
+    },
+    reset: {
+      async reset(repositoryRoot) {
+        resetCalls.push(repositoryRoot);
+        return resetImpl(repositoryRoot);
+      },
+      get calls() {
+        return resetCalls;
       },
     },
   };
@@ -272,6 +329,10 @@ describe("integrator.ask", () => {
         worktreePath: "/repo/.arc/worktrees/gantt-workflow/4.2",
       },
     ]);
+    assert.deepEqual(git.autoResolve.calls, []);
+    assert.deepEqual(git.reset.calls, []);
+    assert.deepEqual(git.verify.calls, ["/repo/.arc/worktrees/gantt-workflow/4.2"]);
+    assert.deepEqual(git.integrationVerify.calls, []);
   });
 
   test("integration question envelope carries gate=integration and the v1 contract", async () => {
@@ -327,21 +388,199 @@ describe("integrator.ask", () => {
 // ---------------------------------------------------------------------------
 
 describe("integrator.cherryPick", () => {
-  test("cherry-pick failure returns ok=false with phase=cherry_pick", async () => {
+  test("Phase 4.2 conflict now fails closed in auto_resolve with needsReplan", async () => {
     const git = makeFakeGit({
-      cherryPick: async () => ({ ok: false, result: { exit_code: 1, stdout: "", stderr: "conflict" } }),
+      cherryPick: async () => ({
+        ok: false,
+        result: { exit_code: 1, stdout: "", stderr: "conflict" },
+        conflictedFiles: ["src/a.ts"],
+      }),
     });
     const asker = makeAsker({ result: approvedOutcome() });
     const integrator = createIntegrator(makeOptions({ git, asker }));
     const result = await integrator.run();
     assert.equal(result.ok, false);
-    assert.equal(result.phase, "cherry_pick");
+    assert.equal(result.phase, "auto_resolve");
+    assert.equal(result.needsReplan, true);
     assert.ok(result.failure);
-    if (result.failure && result.failure.phase === "cherry_pick") {
-      assert.equal(result.failure.reason, "cherry-pick failed");
+    if (result.failure && result.failure.phase === "auto_resolve") {
+      assert.equal(result.failure.reason, "auto_resolve_exhausted");
       assert.equal(result.failure.stderr, "conflict");
     }
     assert.equal(result.cherryPicked, undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Conflict resolution and integration verification
+// ---------------------------------------------------------------------------
+
+describe("integrator.autoResolve", () => {
+  test("resolved conflict passes full checks in the integration checkout", async () => {
+    let cherryAttempts = 0;
+    const git = makeFakeGit({
+      integrationVerify: async (path) => ({
+        ok: true,
+        result: { exit_code: 0, stdout: path, stderr: "" },
+      }),
+      cherryPick: async () => {
+        cherryAttempts += 1;
+        return cherryAttempts === 1
+          ? {
+              ok: false,
+              result: { exit_code: 1, stdout: "", stderr: "conflict" },
+              conflictedFiles: ["src/a.ts"],
+            }
+          : { ok: true, result: { exit_code: 0, stdout: "", stderr: "" } };
+      },
+    });
+    const result = await createIntegrator(makeOptions({ git })).run();
+    assert.equal(result.ok, true);
+    assert.equal(result.phase, "verify_integration");
+    assert.deepEqual(result.cherryPicked, { branch: "main", commitRef: "deadbeef0001" });
+    assert.deepEqual(result.integrationVerified, { ok: true, exit_code: 0, reverted: false });
+    assert.deepEqual(result.conflict?.conflictedFiles, ["src/a.ts"]);
+    assert.equal(result.reverted, false);
+    assert.deepEqual(git.verify.calls, ["/repo/.arc/worktrees/gantt-workflow/4.2"]);
+    assert.deepEqual(git.integrationVerify.calls, ["/repo"]);
+    assert.equal(git.autoResolve.calls[0]?.strategy, "theirs");
+    assert.deepEqual(git.reset.calls, []);
+  });
+
+  test("exhausted retries reset and request replanning", async () => {
+    const git = makeFakeGit({
+      cherryPick: async () => ({
+        ok: false,
+        result: { exit_code: 1, stdout: "", stderr: "still conflicted" },
+        conflictedFiles: ["src/a.ts", "src/b.ts"],
+      }),
+    });
+    const result = await createIntegrator(makeOptions({ git })).run();
+    assert.equal(result.ok, false);
+    assert.equal(result.phase, "auto_resolve");
+    assert.equal(result.failure?.reason, "auto_resolve_exhausted");
+    assert.equal(result.needsReplan, true);
+    assert.equal(result.reverted, true);
+    assert.equal(result.conflict?.attempts, 2);
+    assert.equal(result.conflict?.maxAttempts, 2);
+    assert.equal(git.autoResolve.calls.length, 2);
+    assert.deepEqual(git.reset.calls, ["/repo"]);
+  });
+
+  test("failed integration checks reset the cherry-pick and preserve conflict evidence", async () => {
+    let cherryAttempts = 0;
+    const git = makeFakeGit({
+      integrationVerify: async () => ({
+        ok: false,
+        result: { exit_code: 1, stdout: "", stderr: "full checks failed" },
+      }),
+      cherryPick: async () => {
+        cherryAttempts += 1;
+        return cherryAttempts === 1
+          ? {
+              ok: false,
+              result: { exit_code: 1, stdout: "", stderr: "conflict" },
+              conflictedFiles: ["src/a.ts"],
+            }
+          : { ok: true, result: { exit_code: 0, stdout: "", stderr: "" } };
+      },
+    });
+    const result = await createIntegrator(makeOptions({ git })).run();
+    assert.equal(result.ok, false);
+    assert.equal(result.phase, "verify_integration");
+    assert.equal(result.failure?.reason, "checks_failed");
+    assert.equal(result.needsReplan, true);
+    assert.equal(result.reverted, true);
+    assert.deepEqual(result.conflict?.conflictedFiles, ["src/a.ts"]);
+    assert.deepEqual(result.integrationVerified, { ok: false, exit_code: 1, reverted: true });
+  });
+
+  test("strategy off disables resolution and still resets", async () => {
+    const git = makeFakeGit({
+      cherryPick: async () => ({
+        ok: false,
+        result: { exit_code: 1, stdout: "", stderr: "conflict" },
+        conflictedFiles: ["src/a.ts"],
+      }),
+    });
+    const options = makeOptions({ git });
+    const result = await createIntegrator({
+      ...options,
+      integration: { ...options.integration!, auto_resolve: { strategy: "off" } },
+    }).run();
+    assert.equal(result.phase, "auto_resolve");
+    assert.equal(result.failure?.reason, "auto_resolve_disabled");
+    assert.equal(result.needsReplan, true);
+    assert.deepEqual(git.autoResolve.calls, []);
+    assert.deepEqual(git.reset.calls, ["/repo"]);
+  });
+
+  test("zero maxAttempts disables resolution", async () => {
+    const git = makeFakeGit({
+      cherryPick: async () => ({
+        ok: false,
+        result: { exit_code: 1, stdout: "", stderr: "conflict" },
+      }),
+    });
+    const options = makeOptions({ git });
+    const result = await createIntegrator({
+      ...options,
+      integration: { ...options.integration!, auto_resolve: { maxAttempts: 0 } },
+    }).run();
+    assert.equal(result.failure?.reason, "auto_resolve_disabled");
+    assert.equal(result.conflict?.attempts, 0);
+    assert.deepEqual(git.autoResolve.calls, []);
+  });
+
+  for (const strategy of ["ours", "rerere"] as const) {
+    test(`records ${strategy} strategy on the resolution port`, async () => {
+      let cherryAttempts = 0;
+      const git = makeFakeGit({
+        cherryPick: async () => {
+          cherryAttempts += 1;
+          return cherryAttempts === 1
+            ? {
+                ok: false,
+                result: { exit_code: 1, stdout: "", stderr: "conflict" },
+                conflictedFiles: ["src/a.ts"],
+              }
+            : { ok: true, result: { exit_code: 0, stdout: "", stderr: "" } };
+        },
+      });
+      const options = makeOptions({ git });
+      await createIntegrator({
+        ...options,
+        integration: { ...options.integration!, auto_resolve: { strategy } },
+      }).run();
+      assert.equal(git.autoResolve.calls[0]?.strategy, strategy);
+    });
+  }
+
+  test("reset failure overrides checks failure and reports stderr", async () => {
+    let cherryAttempts = 0;
+    const git = makeFakeGit({
+      integrationVerify: async () => ({
+        ok: false,
+        result: { exit_code: 1, stdout: "", stderr: "checks failed" },
+      }),
+      cherryPick: async () => {
+        cherryAttempts += 1;
+        return cherryAttempts === 1
+          ? { ok: false, result: { exit_code: 1, stdout: "", stderr: "conflict" } }
+          : { ok: true, result: { exit_code: 0, stdout: "", stderr: "" } };
+      },
+      reset: async () => ({
+        ok: false,
+        result: { exit_code: 128, stdout: "", stderr: "reset denied" },
+      }),
+    });
+    const result = await createIntegrator(makeOptions({ git })).run();
+    assert.equal(result.phase, "verify_integration");
+    assert.equal(result.failure?.reason, "reset_failed");
+    assert.ok(result.failure?.phase === "verify_integration");
+    assert.equal(result.failure.stderr, "reset denied");
+    assert.equal(result.reverted, false);
+    assert.equal(result.integrationVerified?.reverted, false);
   });
 });
 
@@ -404,4 +643,31 @@ describe("createIntegrator validates inputs", () => {
       /asker/,
     );
   });
+
+  test("rejects invalid auto-resolve strategies", () => {
+    const options = makeOptions();
+    assert.throws(
+      () => createIntegrator({
+        ...options,
+        integration: {
+          ...options.integration!,
+          auto_resolve: { strategy: "union" as "theirs" },
+        },
+      }),
+      /strategy is invalid/,
+    );
+  });
+
+  for (const maxAttempts of [-1, 1.5, 3]) {
+    test(`rejects invalid maxAttempts=${maxAttempts}`, () => {
+      const options = makeOptions();
+      assert.throws(
+        () => createIntegrator({
+          ...options,
+          integration: { ...options.integration!, auto_resolve: { maxAttempts } },
+        }),
+        /must be an integer/,
+      );
+    });
+  }
 });
