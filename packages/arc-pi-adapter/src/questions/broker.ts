@@ -83,6 +83,7 @@ function buildAskInput(
     item_id: envelope.item_id,
     session_id: envelope.session_id,
     envelope_id: envelope.event_id,
+    question_id: payload.question_id,
     gate: payload.gate,
   };
   const options = payload.options.map((option) => {
@@ -185,17 +186,6 @@ export function createQuestionBroker(options: QuestionBrokerOptions): QuestionBr
   const journal: BrokerJournal = options.journal;
   const config = normalizeConfig(options.config);
   const now = options.now ?? (() => new Date());
-  let createQuestionId = options.createQuestionId;
-  if (createQuestionId === undefined) {
-    const seen = new Set<string>();
-    createQuestionId = () => {
-      // A monotonic counter combined with the timestamp guarantees uniqueness
-      // for the lifetime of the broker even if `crypto.randomUUID` is missing.
-      const id = `${now().getTime().toString(36)}-${(seen.size + 1).toString(36)}`;
-      seen.add(id);
-      return id;
-    };
-  }
   const seenQuestionIds = new Set<string>();
   let closed = false;
   let inflight = 0;

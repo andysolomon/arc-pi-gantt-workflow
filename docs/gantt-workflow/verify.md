@@ -122,3 +122,51 @@
   - None outstanding for Phase 4.3. 4.4 is the next leaf; ARC runner model-registry divergence on kimi bindings still blocks ARC-delegated Code Review; parent-local review fallback remains the workaround for 4.4 unless the registry is synced.
 - Next actions:
   - Phase 4.4 contract drafting is unblocked. Awaiting operator direction.
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 6.1 parent-local verification passed after ARC Verify was blocked by the same model-registry divergence. Parallel runner tests and the full test suite pass; typecheck and scoped lint pass. The runner caps worker execution, serializes shared integration/projection resources, and targets completion by item id.
+- Changes:
+  - Added run-parallel.ts with bounded wave scheduling and per-item failure supervision.
+  - Added explicit itemId completion targeting and adapter exports/package export.
+  - Added parallel runner tests for cap, dependency waves, failure isolation, and single-flight run.
+- Verification:
+  - npm test: workflow-core 160/160 and adapter 99/99 passed.
+  - npm run typecheck passed.
+  - Scoped ESLint on Phase 6.1 files passed; full lint retains two pre-existing errors in live-activity.ts and questions/broker.ts.
+  - git diff --check passed.
+- Risks:
+  - ARC Verify could not start because the runner model registry is out of sync; independent remote review evidence is unavailable.
+  - Shared integration checkout and generated documents are intentionally serialized; only leaf preparation/worker execution is concurrent.
+
+## Evidence
+
+- Status: completed
+- Summary: Phase 6.2 and 6.3 verified locally after ARC Verify remained unavailable from the runner model-registry divergence. Parallel question queue and adapter-neutral dashboard/UI projections meet the bounded, fail-closed contract.
+- Changes:
+  - QuestionQueue enforces hybrid priority, serialized arc_ask_operator calls, UI picks, diagnostics, duplicate/overflow/close handling, provenance context, and total/per-item bounds.
+  - Dashboard projects checkpoint/runtime/question state with deterministic TUI and passive widget output; bounded JSON-safe RPC serves status/widget/question selection without a prompt path.
+  - Package root and subpath exports expose the Phase 6 runner, queue, dashboard, rendering, and RPC APIs.
+- Verification:
+  - npm test: workflow-core 160/160 and arc-pi-adapter 112/112 passed.
+  - npm run typecheck passed; scoped ESLint for all Phase 6 files passed; git diff --check passed.
+  - Full lint has one pre-existing error in packages/arc-pi-adapter/src/orchestrator/live-activity.ts:81.
+- Risks:
+  - ARC Verify could not start because the runner model registry is out of sync; parent-local focused verification is the available evidence.
+  - Integration/projection writes remain serialized by the parallel runner; leaf worker preparation remains concurrent.
+
+## Evidence
+
+- Status: completed
+- Summary: Final Phase 6 verification remains green locally after the bounded queue and denied-integration safeguards were tightened.
+- Changes:
+  - QuestionQueue now preserves/generated question_id context and enforces the proposed three-pending-questions-per-item default alongside the total bound.
+  - Parallel runner marks a negative integration answer blocked and missing integration evidence needs-replan instead of completing the leaf.
+  - Dashboard question selection updates the queue before publishing UI state.
+- Verification:
+  - npm test: workflow-core 160/160 and arc-pi-adapter 113/113 passed.
+  - npm run typecheck passed; scoped Phase 6 ESLint passed; git diff --check passed.
+  - Full lint remains blocked only by the pre-existing live-activity.ts:81 no-useless-assignment error.
+- Risks:
+  - Protected CI and ARC Verify evidence remain unavailable; no remote or GitHub actions were performed.
