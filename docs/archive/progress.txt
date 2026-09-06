@@ -1,12 +1,12 @@
 arc-pi-gantt-workflow - ARC Pi Gantt Workflow - Progress
-Generated: 2026-09-05 14:00:00 EDT
-Plan: docs/IMPLEMENTATION_PLAN.md
+Generated: 2026-09-06
+Plan: docs/archive/IMPLEMENTATION_PLAN.md
 Source artifact: docs/gantt-workflow/plan.md
-Status: Phases 0-8 complete locally; Phase 8 live-edit revalidation and fail-closed model-proposal import are green locally. Phase 9 release-ready handoff remains pending. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
+Status: Phases 0-9 complete locally; Phase 9 archival, source/Git Pi package readiness, and operator documentation are green locally. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
 Task slug: gantt-workflow
 Settled decisions: ARC Decision Ledger semanticKey prefix arc-workflow.*
 This tracker is not Implement or Deploy authorization. Each leaf needs its own exact Implement contract.
-On completion, move this file and the plan to docs/archive/.
+Archived with the plan under docs/archive/ after Phase 9 completion.
 
 [x] 0.0 - Phase 0 - Scaffold and seams
     [x] 0.1 - Workspace scaffold (package.json, packages/*, tsconfig, lint/test)
@@ -56,17 +56,17 @@ On completion, move this file and the plan to docs/archive/.
     [x] 8.1 - Impact-based revalidation on live YAML edits
     [x] 8.2 - Model-proposal importer with confirmed dependencies / parallel-safety
 
-[ ] 9.0 - Phase 9 - Release-ready handoff
-    [ ] 9.1 - Archival (ask keep/delete sessions)
-    [ ] 9.2 - Package publish readiness (no remote push/deploy)
-    [ ] 9.3 - Operator and user docs (install, /arc-workflow, Pi vs ARC routes)
+[x] 9.0 - Phase 9 - Release-ready handoff
+    [x] 9.1 - Archival controller (ask keep/delete sessions and journal)
+    [x] 9.2 - Source/Git Pi package readiness (strict allowlist; no remote push/deploy)
+    [x] 9.3 - Operator and user docs (install, /arc-workflow, status, Pi vs ARC routes)
 
 ASCII Gantt - dependency-wave schedule
 Legend: == scheduled work  .. inactive  | M1 gate
 Basis: one wave is a dependency slot, not a duration or calendar estimate. Items in
 one wave may run in parallel only after separate Implement approvals and while their
 file ownership remains disjoint. No wave exceeds the settled concurrency cap of 4.
-Phases 0-8 are complete locally. Waves 14-16 contain pending Phase 9 handoff work. Protected-CI evidence for 5.3 remains outstanding under the operator-recorded local-green override.
+Phases 0-9 are complete locally. Protected-CI evidence for 5.3 remains outstanding under the operator-recorded local-green override.
 
 Wave ->                             01 02 03 04 05 06 07 08 09 10 | 11 12 13 14 15 16
 1.1 DAG model + checkpoint states   == .. .. .. .. .. .. .. .. .. | .. .. .. .. .. ..
@@ -98,7 +98,7 @@ Wave ->                             01 02 03 04 05 06 07 08 09 10 | 11 12 13 14 
 8.1 Impact-based revalidation       .. .. .. .. .. .. .. .. .. .. | .. == .. .. .. ..
 8.2 Model-proposal importer         .. .. .. .. .. .. .. .. .. .. | == .. .. .. .. ..
 9.1 Archival                        .. .. .. .. .. .. .. .. .. .. | .. .. .. == .. ..
-9.2 Package publish readiness       .. .. .. .. .. .. .. .. .. .. | .. .. .. .. == ..
+9.2 Source/Git Pi package readiness .. .. .. .. .. .. .. .. .. .. | .. .. .. .. == ..
 9.3 Operator and user docs          .. .. .. .. .. .. .. .. .. .. | .. .. .. .. .. ==
 
 Critical dependency chain (assuming equal-size waves):

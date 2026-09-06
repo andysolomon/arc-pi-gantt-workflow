@@ -5,6 +5,37 @@
   "type": "module",
   "license": "MIT",
   "description": "Generic workflow library plus a thin ARC Pi adapter.",
+  "keywords": [
+    "pi-package",
+    "arc",
+    "workflow",
+    "gantt"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andysolomon/arc-pi-gantt-workflow.git"
+  },
+  "homepage": "https://github.com/andysolomon/arc-pi-gantt-workflow#readme",
+  "bugs": {
+    "url": "https://github.com/andysolomon/arc-pi-gantt-workflow/issues"
+  },
+  "files": [
+    "packages/arc-pi-adapter/src/",
+    "packages/arc-pi-adapter/package.json",
+    "packages/workflow-core/src/",
+    "packages/workflow-core/schema/",
+    "packages/workflow-core/package.json",
+    "docs/USER_GUIDE.md",
+    "README.md",
+    "LICENSE",
+    "package.json",
+    "package-lock.json"
+  ],
+  "pi": {
+    "extensions": [
+      "./packages/arc-pi-adapter/src/extension.ts"
+    ]
+  },
   "workspaces": [
     "packages/workflow-core",
     "packages/arc-pi-adapter"

@@ -24,6 +24,10 @@
     "./ui": {
       "types": "./src/ui/index.ts",
       "import": "./src/ui/index.ts"
+    },
+    "./extension": {
+      "types": "./src/extension.ts",
+      "import": "./src/extension.ts"
     }
   },
   "scripts": {

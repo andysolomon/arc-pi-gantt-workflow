@@ -159,6 +159,40 @@ export type {
 } from "./complete/index.ts";
 
 export {
+  default as registerArcWorkflow,
+  WORKFLOW_COMMAND_NAME,
+  WORKFLOW_COMMANDS,
+  parseWorkflowCommand,
+  workflowHelp,
+} from "./extension.ts";
+export type {
+  ParsedWorkflowCommand,
+  WorkflowCommand,
+  WorkflowCommandState,
+  WorkflowExtensionApi,
+  WorkflowExtensionContext,
+  WorkflowExtensionUi,
+} from "./extension.ts";
+
+export {
+  createArchive,
+  createArchiveController,
+} from "./archive/index.ts";
+export type {
+  ArchiveController,
+  ArchiveFailure,
+  ArchiveFailureCode,
+  ArchiveFailureResult,
+  ArchiveJournalTarget,
+  ArchiveOptions,
+  ArchiveResourcePort,
+  ArchiveRetention,
+  ArchiveResult,
+  ArchiveSessionTarget,
+  ArchiveSuccess,
+} from "./archive/index.ts";
+
+export {
   createParallelRunner,
   DEFAULT_PARALLEL_RUNNER_CONCURRENCY,
 } from "./run-parallel.ts";
