@@ -1,6 +1,6 @@
 # ARC Pi Gantt Workflow — Implementation Plan
 
-**Status:** Phase 8 (live edits and import proposals) complete locally. Phase 9 is pending. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
+**Status:** Phases 0–9 (release-ready handoff) complete locally. Protected-CI evidence for the M1 live integration test remains unavailable; the operator recorded a local-green override for Phase 6.
 **Source artifact:** `docs/gantt-workflow/plan.md` (Plan worker, 2026-09-03). This file is the human-facing promotion of that artifact, with truncated/redacted lines restored from the Decision Ledger and parent-confirmed sibling seams.
 **Task slug:** `gantt-workflow`
 **Planning mode:** Hybrid greenfield + integration gap
@@ -255,11 +255,11 @@ Every numbered item is an executable leaf. Groups do not launch sessions. Each l
 - [x] **8.1 Impact-based revalidation** on live YAML edits. depends: [1.3, 6.1].
 - [x] **8.2 Model-proposal importer** (adapter) — dependencies and parallel-safety must be confirmed via `arc_ask_operator` before any leaf becomes `ready`. depends: [1.4, 3.3].
 
-### Phase 9 — Release-ready handoff (9.0 pending)
+### Phase 9 — Release-ready handoff (9.0 complete locally)
 
-- [ ] **9.1 Archival** — sessions + journal archived; YAML final checkpoints; ask keep/delete. depends: [7.1, 7.2, 7.3].
-- [ ] **9.2 Package publish readiness** — installable as a Pi package; no remote push/deploy automation. depends: [9.1].
-- [ ] **9.3 Operator and user docs** — owns README expansion only after product exists, plus install-in-isolated-ARC-Pi-profile docs, `/arc-workflow` command reference, score/status interpretation, and Pi-parent vs ARC-worker-route boundaries. depends: [9.2].
+- [x] **9.1 Archival** — terminal-state and ownership preflight, one brokered `release` keep/delete decision, atomic final YAML/progress/Gantt writes, and injected session/journal retention ports. depends: [7.1, 7.2, 7.3].
+- [x] **9.2 Source/Git Pi package readiness** — root `pi.extensions` manifest, strict package allowlist, loadable `/arc-workflow` entrypoint, and tarball/install smoke checks; no remote push/deploy automation. depends: [9.1].
+- [x] **9.3 Operator and user docs** — README and `docs/USER_GUIDE.md` cover isolated-profile installation, `/arc-workflow` commands, six-state status interpretation, decision gates, and the Pi-parent/ARC-worker boundary. depends: [9.2].
 
 ## 8. Acceptance criteria for v1
 
@@ -344,4 +344,4 @@ Each arrow is a separate Implement approval. Nothing after 5.3 starts until the 
 1. Review this plan and `docs/progress.txt` against the Decision Ledger.
 2. Do not start product TypeScript until an exact Phase 0.1 Implement contract is approved.
 3. Keep this plan and `docs/progress.txt` synchronized as leaves complete.
-4. When all work is complete, move both files to `docs/archive/` and record that archival step in the tracker.
+4. Completed in this handoff: move both files to `docs/archive/` together and retain the protected-CI evidence caveat.
